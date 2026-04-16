@@ -1,0 +1,467 @@
+[
+  {
+    "account_id": "act_879480224604629",
+    "account_name": "SC2-171 - RP Genus - Aks - LOC",
+    "status": 2,
+    "origen": "client",
+    "campaigns": [
+      {
+        "id": "6978905424671",
+        "name": "[D-Offer]-[Taylor Quinn ]-[V1_Agres_ video 5 ]-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "6978904471471",
+        "name": "[D-Offer]-[Sydney Moss]-[V1_Agres_ video 4 ]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "6978901400071",
+        "name": "[D-Offer]-[Kennedy Rose]-[V1_Agres_ video 1]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "6978894466671",
+        "name": "[D-Offer]-[Piper West]-[V1_Agres_ video 2]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      }
+    ]
+  },
+  {
+    "account_id": "act_1306256300004871",
+    "account_name": "DG-03 - RP Genus - Aks - LOC - Not Spending",
+    "status": 1,
+    "origen": "client",
+    "campaigns": []
+  },
+  {
+    "account_id": "act_900364275348331",
+    "account_name": "DG-51 - RP Genus - Aks - LOC",
+    "status": 1,
+    "origen": "client",
+    "campaigns": [
+      {
+        "id": "120242347341230475",
+        "name": "[Dương Mi]-[03_L1_V12]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      }
+    ]
+  },
+  {
+    "account_id": "act_1239484177480232",
+    "account_name": "MSTC-20 - RP Genus - Aks - LOC",
+    "status": 2,
+    "origen": "client",
+    "campaigns": [
+      {
+        "id": "120245403253340020",
+        "name": "[Giang Kim]-[03_L1_V25]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120245402559430020",
+        "name": "[Giang Dân]-[03_L1_V24]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120245400326300020",
+        "name": "[Dương Chinh]-[03_L1_V23]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120245397895160020",
+        "name": "[Giang Loan]-[03_L1_V22]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120245394612780020",
+        "name": "[Giao Ngà]-[03_L1_V21]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244975512560020",
+        "name": "[Caroline Holt]-[IMAGEN 2 — Grace Montgomery]-#5",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244975261380020",
+        "name": "[Caroline Holt]-[IMAGEN 2 — Grace Montgomery]-#4",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244975003530020",
+        "name": "[Caroline Holt]-[IMAGEN 2 — Grace Montgomery]-#3",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244974845780020",
+        "name": "[Caroline Holt]-[IMAGEN 2 — Grace Montgomery]-#2",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244973923700020",
+        "name": "[Penelope Wade]-[03_L3_V3]-#5",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244973610770020",
+        "name": "[Penelope Wade]-[03_L3_V3]-#4",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244973323080020",
+        "name": "[Penelope Wade]-[03_L3_V3]-#3",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244973074510020",
+        "name": "[Penelope Wade]-[03_L3_V3]-#2",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244907963510020",
+        "name": "[Aubrey Lane]-[IMAGEN 10 — Harper Brooks]-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244907112020020",
+        "name": "[Allison Gray]-[IMAGEN 9 — Jessica Turner ]-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244770866350020",
+        "name": "[Caroline Holt]-[IMAGEN 2 — Grace Montgomery]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244770810860020",
+        "name": "[Brooke Sullivan]-[IMAGEN 1 — Charlotte Sterling]-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244770415120020",
+        "name": "[Penelope Wade]-[03_L3_V3]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244770380600020",
+        "name": "[Keira Nash]-[03_L3_V2]-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244770240370020",
+        "name": "[Evelyn Grant]-[03_L3_V1]-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      }
+    ]
+  },
+  {
+    "account_id": "act_1333528258478407",
+    "account_name": "SC2-42 - RP Genus - Aks - LOC",
+    "status": 2,
+    "origen": "client",
+    "campaigns": [
+      {
+        "id": "120240443917960342",
+        "name": "[D-Offer]-[Chloe Bennett]-[V2_Agres_ video 5] - #1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120240443095360342",
+        "name": "[D-Offer]-[Brooklyn Hayes]-[V2_Agres_ video 4] - #1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120240431280200342",
+        "name": "[D-Offer]-[Charlotte Sterling]-[V2_Agres_ video 3] - #1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120240430767750342",
+        "name": "[D-Offer]-[Luna Rivers]-[V2_Agres_ video 2] - #1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120240430018840342",
+        "name": "[D-Offer]-[Chloe Vance]-[V2_Agres_ video 1] - #1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      }
+    ]
+  },
+  {
+    "account_id": "act_1650693448960867",
+    "account_name": "THM-119 - RP Genus - Aks - LOC",
+    "status": 1,
+    "origen": "client",
+    "campaigns": [
+      {
+        "id": "120244217069790361",
+        "name": "[Zara Blackwood]-[V2_Agres_ video 4]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120243618721250361",
+        "name": "[Zara Blackwood]-[V2_Agres_ video 4",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120243618641110361",
+        "name": "[Vienna Frost]-[V2_Agres_ video 2]-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      }
+    ]
+  },
+  {
+    "account_id": "act_2049541032515377",
+    "account_name": "KM-19 - RP Genus - Aks - LOC",
+    "status": 2,
+    "origen": "client",
+    "campaigns": [
+      {
+        "id": "120241424826230384",
+        "name": "[Giả Diễm]-[04_L1_IMG10]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241424711880384",
+        "name": "[Giao Ly]-[04_L1_IMG9]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241424560800384",
+        "name": "[Giáp Giang]-[04_L1_IMG8]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241424372640384",
+        "name": "[Huỳnh Cúc]-[04_L1_IMG7]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241424239670384",
+        "name": "[Giang Nương]-[04_L1_IMG6]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241423518400384",
+        "name": "[Giang Như]-[04_L1_IMG5]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241423381040384",
+        "name": "[Giang Huyền]-[04_L1_IMG4]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241423201880384",
+        "name": "[Giả Lợi]-[04_L1_IMG3]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241423063630384",
+        "name": "[Giao Du]-[04_L1_IMG2]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241380528560384",
+        "name": "EvelynGrant-IMG12-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241380528490384",
+        "name": "WillowVance-IMG11-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241380528030384",
+        "name": "MeganSullivan-IMG10-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241380527700384",
+        "name": "HannahBrooks-IMG09-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241380527600384",
+        "name": "GraceMontgomery-IMG08-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241380526780384",
+        "name": "MadisonBlair-IMG07-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241380526560384",
+        "name": "ChloeVance-IMG06-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241380526400384",
+        "name": "RileyHudson-IMG05-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241380526270384",
+        "name": "LunaRivers-IMG04-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241380526200384",
+        "name": "SkylerReed-IMG03-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241380526000384",
+        "name": "SavannahThorne-IMG02-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241380524410384",
+        "name": "EvelynGrant-IMG01-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241291334280384",
+        "name": "Evelyn Grant-Not_A_Scam-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241291332040384",
+        "name": "Megan Sullivan-One_Simple_Decision-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241291329810384",
+        "name": "Hannah Brooks-Fired_at_47-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241291327810384",
+        "name": "Grace Montgomery-No_Experience-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241291325860384",
+        "name": "Madison Blair-Delete_This-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241291324140384",
+        "name": "Chloe Vance-Almost_Didnt_Click-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241291321200384",
+        "name": "Riley Hudson-3_Weeks-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241291317590384",
+        "name": "Luna Rivers-Too_Old-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241291314120384",
+        "name": "Skyler Reed-Neighbor_Quit-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241291312630384",
+        "name": "Savannah Thorne-Broke_at_54-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241252822770384",
+        "name": "[Evelyn Grant]-[Creativos-S1_Agres]-[CBO]",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      }
+    ]
+  },
+  {
+    "account_id": "act_1654285161902955",
+    "account_name": "THM-55 - RP Genus - Aks - LOC",
+    "status": 1,
+    "origen": "client",
+    "campaigns": [
+      {
+        "id": "120250080028340091",
+        "name": "[Brooke Sullivan]-[03_L3_V8]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120249661907440091",
+        "name": "[Brooke Sullivan]-[03_L3_V8]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      }
+    ]
+  }
+]

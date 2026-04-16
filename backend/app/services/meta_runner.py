@@ -1,0 +1,47 @@
+import os
+from datetime import datetime, timezone
+from typing import Dict, List, Tuple
+
+from app.config import PYTHON_BIN
+
+
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+ARTIFACTS_DIR = os.path.join(ROOT_DIR, "logs", "artifacts")
+os.makedirs(ARTIFACTS_DIR, exist_ok=True)
+
+
+def _artifact_path(prefix: str, suffix: str) -> str:
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
+    return os.path.join(ARTIFACTS_DIR, f"{prefix}_{ts}{suffix}")
+
+
+def explorer_command(bm_id: str, token: str) -> Tuple[List[str], Dict[str, str]]:
+    output_path = _artifact_path("explorer", ".json")
+    cmd = [
+        PYTHON_BIN,
+        "meta_bm_explorer.py",
+        "--bm-id",
+        bm_id,
+        "--access-token",
+        token,
+        "--output-json",
+        output_path,
+    ]
+    return cmd, {"output_json": output_path}
+
+
+def bulk_clone_command(campaign_id: str, token: str) -> Tuple[List[str], Dict[str, str]]:
+    cmd = [
+        PYTHON_BIN,
+        "meta_bulk_clone_fixed.py",
+        "--campaign-id",
+        campaign_id,
+        "--access-token",
+        token,
+    ]
+    return cmd, {}
+
+
+def single_clone_command(campaign_ids: List[str], token: str) -> Tuple[List[str], Dict[str, str]]:
+    cmd = [PYTHON_BIN, "Meta_clone_fixed.py", "--access-token", token, "--campaign-ids", *campaign_ids]
+    return cmd, {}

@@ -1,0 +1,116 @@
+import React, { useEffect, useState } from "react";
+import { api } from "../api";
+
+const initialForm = { name: "", bmId: "", accessToken: "" };
+
+export default function ConfigurationPage() {
+  const [configs, setConfigs] = useState([]);
+  const [form, setForm] = useState(initialForm);
+  const [editing, setEditing] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function load() {
+    setLoading(true);
+    setError("");
+    try {
+      const rows = await api.listConfigs();
+      setConfigs(rows);
+    } catch (e) {
+      setError(String(e.message || e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function onSubmit(e) {
+    e.preventDefault();
+    setError("");
+    try {
+      if (editing) {
+        await api.updateConfig(editing, form);
+      } else {
+        await api.createConfig(form);
+      }
+      setForm(initialForm);
+      setEditing(null);
+      await load();
+    } catch (err) {
+      setError(String(err.message || err));
+    }
+  }
+
+  function onEdit(row) {
+    setEditing(row._id);
+    setForm({ name: row.name || "", bmId: row.bm_id || "", accessToken: "" });
+  }
+
+  async function onDelete(id) {
+    if (!window.confirm("Eliminar configuracion?")) return;
+    setError("");
+    try {
+      await api.deleteConfig(id);
+      await load();
+    } catch (err) {
+      setError(String(err.message || err));
+    }
+  }
+
+  return (
+    <div className="panel-grid">
+      <section className="panel">
+        <h3>{editing ? "Editar configuracion" : "Nueva configuracion"}</h3>
+        <form onSubmit={onSubmit} className="form-grid">
+          <label>Nombre BM</label>
+          <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+          <label>BM ID</label>
+          <input value={form.bmId} onChange={(e) => setForm({ ...form, bmId: e.target.value })} required />
+          <label>Access Token</label>
+          <textarea
+            value={form.accessToken}
+            onChange={(e) => setForm({ ...form, accessToken: e.target.value })}
+            required={!editing}
+            placeholder={editing ? "Dejar vacio para mantener token actual" : "Pegar token"}
+            rows={3}
+          />
+          <div className="actions">
+            <button type="submit">{editing ? "Guardar" : "Crear"}</button>
+            {editing ? <button type="button" onClick={() => { setEditing(null); setForm(initialForm); }}>Cancelar</button> : null}
+          </div>
+        </form>
+      </section>
+      <section className="panel">
+        <h3>Configuraciones</h3>
+        {loading ? <p>Cargando...</p> : null}
+        {error ? <p className="error">{error}</p> : null}
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>BM ID</th>
+              <th>Token</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {configs.map((c) => (
+              <tr key={c._id}>
+                <td>{c.name}</td>
+                <td>{c.bm_id}</td>
+                <td>{c.tokenConfigured ? "Configurado" : "No configurado"}</td>
+                <td className="row-actions">
+                  <button onClick={() => onEdit(c)}>Editar</button>
+                  <button onClick={() => onDelete(c._id)}>Eliminar</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+    </div>
+  );
+}
