@@ -1,11 +1,11 @@
+.git
 .venv
 __pycache__
 *.pyc
 *.pyo
 *.pyd
-.env
+backend/.env
 frontend/node_modules
 frontend/dist
 backend/app/static
 logs
-.git

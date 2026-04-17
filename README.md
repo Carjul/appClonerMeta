@@ -59,7 +59,7 @@ Despues de eso, el backend responde tambien la UI en `/`.
 Construir imagen (desde la raiz del proyecto):
 
 ```bash
-docker build -f backend/Dockerfile -t meta-backend .
+docker build -f Dockerfile -t meta-backend .
 ```
 
 Ejecutar contenedor:
