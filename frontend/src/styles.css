@@ -188,6 +188,18 @@ th {
   color: #7ec8ff;
 }
 
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.account-filter {
+  min-width: 220px;
+}
+
 .account-block {
   margin-top: 18px;
 }
@@ -306,6 +318,15 @@ th {
 
   .inline-actions {
     flex-direction: column;
+  }
+
+  .section-head {
+    align-items: stretch;
+  }
+
+  .section-head .account-filter {
+    min-width: 0;
+    width: 100%;
   }
 
   .inline-actions select,

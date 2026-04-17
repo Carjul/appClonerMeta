@@ -1,87 +1,27 @@
 import React, { useEffect, useMemo, useState } from "react";
+import Swal from "sweetalert2";
 import { api } from "../api";
-
-const LS_ACCOUNTS_KEY = "meta_campaigns_accounts";
-const LS_CONFIG_KEY = "meta_campaigns_config_id";
-const LS_SELECTED_KEY = "meta_campaigns_selected";
-const LS_SELECTED_ACCOUNT_KEY = "meta_campaigns_selected_account";
-const LS_BULK_KEY = "meta_campaigns_bulk_id";
 
 export default function CampaignsPage() {
   const [configs, setConfigs] = useState([]);
-  const [configId, setConfigId] = useState(() => localStorage.getItem(LS_CONFIG_KEY) || "");
+  const [configId, setConfigId] = useState("");
   const [explorerJobId, setExplorerJobId] = useState("");
-  const [accounts, setAccounts] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem(LS_ACCOUNTS_KEY) || "[]");
-    } catch {
-      return [];
-    }
-  });
-  const [selectedCampaigns, setSelectedCampaigns] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem(LS_SELECTED_KEY) || "{}");
-    } catch {
-      return {};
-    }
-  });
+  const [accounts, setAccounts] = useState([]);
+  const [selectedCampaigns, setSelectedCampaigns] = useState({});
   const [jobs, setJobs] = useState([]);
   const [jobLogs, setJobLogs] = useState([]);
   const [selectedJobId, setSelectedJobId] = useState("");
-  const [bulkCampaignId, setBulkCampaignId] = useState(() => localStorage.getItem(LS_BULK_KEY) || "");
-  const [selectedAccountId, setSelectedAccountId] = useState(() => localStorage.getItem(LS_SELECTED_ACCOUNT_KEY) || "");
+  const [bulkCampaignId, setBulkCampaignId] = useState("");
+  const [selectedAccountId, setSelectedAccountId] = useState("");
+  const [accountFilter, setAccountFilter] = useState("all");
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
-
-  useEffect(() => {
-    localStorage.setItem(LS_CONFIG_KEY, configId || "");
-  }, [configId]);
-
-  useEffect(() => {
-    localStorage.setItem(LS_ACCOUNTS_KEY, JSON.stringify(accounts || []));
-  }, [accounts]);
-
-  useEffect(() => {
-    localStorage.setItem(LS_SELECTED_KEY, JSON.stringify(selectedCampaigns || {}));
-  }, [selectedCampaigns]);
-
-  useEffect(() => {
-    localStorage.setItem(LS_SELECTED_ACCOUNT_KEY, selectedAccountId || "");
-  }, [selectedAccountId]);
-
-  useEffect(() => {
-    localStorage.setItem(LS_BULK_KEY, bulkCampaignId || "");
-  }, [bulkCampaignId]);
+  const [deleteWatch, setDeleteWatch] = useState({});
 
   useEffect(() => {
     const timer = setTimeout(() => setInfo(""), 2200);
     return () => clearTimeout(timer);
   }, [info]);
-
-  useEffect(() => {
-    function onKeyDown(e) {
-      const target = e.target;
-      const tag = (target && target.tagName ? target.tagName : "").toLowerCase();
-      const isTyping = tag === "input" || tag === "textarea" || (target && target.isContentEditable);
-      if (isTyping) return;
-      if (e.key && e.key.toLowerCase() === "r") {
-        localStorage.removeItem(LS_ACCOUNTS_KEY);
-        localStorage.removeItem(LS_CONFIG_KEY);
-        localStorage.removeItem(LS_SELECTED_KEY);
-        localStorage.removeItem(LS_SELECTED_ACCOUNT_KEY);
-        localStorage.removeItem(LS_BULK_KEY);
-        setAccounts([]);
-        setSelectedCampaigns({});
-        setSelectedAccountId("");
-        setBulkCampaignId("");
-        setConfigId("");
-        setInfo("LocalStorage limpiado.");
-      }
-    }
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
 
   async function loadConfigs() {
     const rows = await api.listConfigs();
@@ -104,6 +44,74 @@ export default function CampaignsPage() {
     return () => clearInterval(id);
   }, [selectedJobId]);
 
+  useEffect(() => {
+    async function loadCache() {
+      if (!configId) {
+        setAccounts([]);
+        setSelectedCampaigns({});
+        setSelectedAccountId("");
+        return;
+      }
+      try {
+        const cache = await api.getExplorerCache(configId);
+        setAccounts(cache.accounts || []);
+        setSelectedCampaigns({});
+        setSelectedAccountId("");
+        setAccountFilter("all");
+        if (cache.cachedAt) {
+          setInfo("Campanas cargadas desde cache de base de datos.");
+        }
+      } catch (e) {
+        setError(String(e.message || e));
+      }
+    }
+    loadCache();
+  }, [configId]);
+
+  useEffect(() => {
+    if (!jobs.length || !Object.keys(deleteWatch).length) return;
+
+    const jobsById = new Map(jobs.map((j) => [j._id, j]));
+    let changed = false;
+    const nextWatch = { ...deleteWatch };
+
+    for (const [jobId, watch] of Object.entries(nextWatch)) {
+      if (watch.applied) continue;
+      const job = jobsById.get(jobId);
+      if (!job) continue;
+
+      if (job.status === "completed") {
+        const idsSet = new Set(watch.campaignIds || []);
+        setAccounts((prev) =>
+          prev.map((acc) => ({
+            ...acc,
+            campaigns: (acc.campaigns || []).filter((c) => !idsSet.has(c.id)),
+          }))
+        );
+        setSelectedCampaigns((prev) => {
+          const copy = { ...prev };
+          for (const id of idsSet) {
+            delete copy[id];
+          }
+          return copy;
+        });
+        setSelectedAccountId("");
+        setInfo("Campanas eliminadas y lista actualizada sin refrescar.");
+        nextWatch[jobId] = { ...watch, applied: true };
+        changed = true;
+      }
+
+      if (job.status === "failed" || job.status === "cancelled") {
+        nextWatch[jobId] = { ...watch, applied: true };
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      setDeleteWatch(nextWatch);
+    }
+  }, [jobs, deleteWatch]);
+
   async function runExplorer() {
     if (!configId) return;
     setError("");
@@ -112,6 +120,10 @@ export default function CampaignsPage() {
     setSelectedAccountId("");
     const res = await api.runExplorer(configId);
     setExplorerJobId(res.jobId);
+    setSelectedJobId(res.jobId);
+    setJobLogs([]);
+    await loadJobs();
+    await openLogs(res.jobId);
   }
 
   useEffect(() => {
@@ -162,28 +174,99 @@ export default function CampaignsPage() {
   async function runBulk() {
     if (!configId || !bulkCampaignId) return;
     setError("");
-    await api.runBulk(configId, bulkCampaignId);
+    const res = await api.runBulk(configId, bulkCampaignId);
+    setSelectedJobId(res.jobId);
+    setJobLogs([]);
     await loadJobs();
+    await openLogs(res.jobId);
   }
 
   async function runSingle() {
     if (!configId || selectedIds.length === 0) return;
     setError("");
-    await api.runSingle(configId, selectedIds);
+    const res = await api.runSingle(configId, selectedIds);
+    setSelectedJobId(res.jobId);
+    setJobLogs([]);
     await loadJobs();
+    await openLogs(res.jobId);
+  }
+
+  async function runDeleteCampaigns() {
+    if (!configId || selectedIds.length === 0) return;
+    const confirm = await Swal.fire({
+      title: "Eliminar campanas",
+      text: `Se eliminaran ${selectedIds.length} campanas seleccionadas.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Si, eliminar",
+      cancelButtonText: "Cancelar",
+    });
+    if (!confirm.isConfirmed) return;
+
+    setError("");
+    const selectedNow = [...selectedIds];
+    const res = await api.deleteCampaigns(configId, selectedNow, 10);
+    setSelectedJobId(res.jobId);
+    setJobLogs([]);
+    setDeleteWatch((prev) => ({
+      ...prev,
+      [res.jobId]: { campaignIds: selectedNow, applied: false },
+    }));
+
+    await Swal.fire({
+      title: "Proceso iniciado",
+      text: "La eliminacion fue enviada. Puedes seguir el estado en Jobs.",
+      icon: "success",
+      timer: 1600,
+      showConfirmButton: false,
+    });
+    await loadJobs();
+    await openLogs(res.jobId);
   }
 
   async function cancel(jobId) {
+    const confirm = await Swal.fire({
+      title: "Cancelar job",
+      text: "Se intentara detener la ejecucion en curso.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Cancelar job",
+      cancelButtonText: "Cerrar",
+    });
+    if (!confirm.isConfirmed) return;
+
     await api.cancelJob(jobId);
+    await Swal.fire({
+      title: "Cancelacion enviada",
+      text: "Revisa el estado en la tabla de jobs.",
+      icon: "success",
+      timer: 1400,
+      showConfirmButton: false,
+    });
     await loadJobs();
   }
 
   async function removeJob(jobId) {
+    const confirm = await Swal.fire({
+      title: "Eliminar job",
+      text: "Se eliminara el job y sus logs.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Eliminar",
+      cancelButtonText: "Cancelar",
+    });
+    if (!confirm.isConfirmed) return;
+
     await api.deleteJob(jobId);
     if (selectedJobId === jobId) {
       setSelectedJobId("");
       setJobLogs([]);
     }
+    setDeleteWatch((prev) => {
+      const copy = { ...prev };
+      delete copy[jobId];
+      return copy;
+    });
     await loadJobs();
   }
 
@@ -202,10 +285,23 @@ export default function CampaignsPage() {
     }
   }
 
+  const filteredAccounts = useMemo(() => {
+    if (accountFilter === "all") return accounts;
+    return accounts.filter((acc) => acc.account_id === accountFilter);
+  }, [accounts, accountFilter]);
+
   return (
     <div className="panel-grid single-col">
       <section className="panel">
-        <h3>Seleccion BM y campañas</h3>
+        <div className="section-head">
+          <h3>Seleccion BM y campañas</h3>
+          <select className="account-filter" value={accountFilter} onChange={(e) => setAccountFilter(e.target.value)}>
+            <option value="all">Todas las cuentas</option>
+            {accounts.map((acc) => (
+              <option key={acc.account_id} value={acc.account_id}>{acc.account_name}</option>
+            ))}
+          </select>
+        </div>
         {error ? <p className="error">{error}</p> : null}
         {info ? <p className="info">{info}</p> : null}
         <div className="inline-actions">
@@ -216,7 +312,7 @@ export default function CampaignsPage() {
           <button className="btn btn-primary" onClick={runExplorer}>Cargar cuentas/campañas</button>
         </div>
 
-        {accounts.map((acc) => (
+        {filteredAccounts.map((acc) => (
           <details key={acc.account_id} className="account-block" open>
             <summary>
               {acc.account_name} ({acc.account_id}) - {(acc.campaigns || []).length} campañas
@@ -260,7 +356,7 @@ export default function CampaignsPage() {
         ))}
 
         <div className="clone-controls">
-          <h4>Acciones de clonacion</h4>
+          <h4>Acciones</h4>
         </div>
         <div className="action-cards">
           <div className="mini-card clone-card">
@@ -272,6 +368,11 @@ export default function CampaignsPage() {
             <h4>Single clone</h4>
             <p>Seleccionadas: {selectedIds.length}</p>
             <button className="btn btn-primary" onClick={runSingle} disabled={selectedIds.length === 0}>Ejecutar single</button>
+          </div>
+          <div className="mini-card clone-card">
+            <h4>Delete campanas</h4>
+            <p>Seleccionadas: {selectedIds.length}</p>
+            <button className="btn btn-danger" onClick={runDeleteCampaigns} disabled={selectedIds.length === 0}>Eliminar seleccionadas</button>
           </div>
         </div>
       </section>

@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE || "https://appclonermeta.onrender.com";
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 async function req(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -20,9 +20,11 @@ export const api = {
 
   runExplorer: (configId) => req("/api/explorer/run", { method: "POST", body: JSON.stringify({ configId }) }),
   getExplorerResult: (jobId) => req(`/api/explorer/${jobId}/result`),
+  getExplorerCache: (configId) => req(`/api/explorer/cache/${configId}`),
 
   runBulk: (configId, campaignId) => req("/api/clone/bulk", { method: "POST", body: JSON.stringify({ configId, campaignId }) }),
   runSingle: (configId, campaignIds) => req("/api/clone/single", { method: "POST", body: JSON.stringify({ configId, campaignIds }) }),
+  deleteCampaigns: (configId, campaignIds, batch = 10) => req("/api/delete/campaigns", { method: "POST", body: JSON.stringify({ configId, campaignIds, batch }) }),
 
   listJobs: () => req("/api/jobs"),
   getJob: (jobId) => req(`/api/jobs/${jobId}`),

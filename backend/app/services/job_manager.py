@@ -4,7 +4,7 @@ import subprocess
 import threading
 from typing import Any, Dict, List, Optional
 
-from app.db import job_logs_col, jobs_col
+from app.db import configs_col, job_logs_col, jobs_col
 from app.services.meta_runner import ROOT_DIR
 from app.utils import now_iso, oid, serialize_doc
 
@@ -74,6 +74,16 @@ def _progress_from_line(job_type: str, payload: Dict[str, Any], line: str, count
         percent = min(99, int(done * 100 / total))
         return {"percent": percent, "message": f"Progreso {done}/{total}"}
 
+    if job_type == "delete_campaigns":
+        total = max(1, len(payload.get("campaignIds", [])))
+        if "| OK" in text and "Deleted campaign:" in text:
+            counters["done"] = counters.get("done", 0) + 1
+        if "| ERROR" in text and "Failed campaign" in text:
+            counters["done"] = counters.get("done", 0) + 1
+        done = counters.get("done", 0)
+        percent = min(99, int(done * 100 / total))
+        return {"percent": percent, "message": f"Eliminadas {done}/{total}"}
+
     return None
 
 
@@ -129,6 +139,41 @@ def _run_job_thread(job_id: str, job_type: str, payload: Dict[str, Any], cmd: Li
             if result_payload is not None:
                 updates["result"] = result_payload
             _update_job(job_id, updates)
+
+            job_doc = jobs_col.find_one({"_id": oid(job_id)}, {"config_id": 1})
+            config_id = job_doc.get("config_id") if job_doc else None
+
+            if job_type == "explorer" and result_payload is not None and config_id:
+                configs_col.update_one(
+                    {"_id": oid(config_id)},
+                    {
+                        "$set": {
+                            "explorer_accounts": result_payload.get("accounts", []),
+                            "explorer_cached_at": now_iso(),
+                        }
+                    },
+                )
+
+            if job_type == "delete_campaigns" and config_id:
+                campaign_ids = set(payload.get("campaignIds", []))
+                cfg = configs_col.find_one({"_id": oid(config_id)}, {"explorer_accounts": 1})
+                accounts = (cfg or {}).get("explorer_accounts", [])
+                if accounts and campaign_ids:
+                    new_accounts = []
+                    for acc in accounts:
+                        acc_copy = dict(acc)
+                        campaigns = acc_copy.get("campaigns", [])
+                        acc_copy["campaigns"] = [c for c in campaigns if c.get("id") not in campaign_ids]
+                        new_accounts.append(acc_copy)
+                    configs_col.update_one(
+                        {"_id": oid(config_id)},
+                        {
+                            "$set": {
+                                "explorer_accounts": new_accounts,
+                                "explorer_cached_at": now_iso(),
+                            }
+                        },
+                    )
         else:
             _update_job(
                 job_id,

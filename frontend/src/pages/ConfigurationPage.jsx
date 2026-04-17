@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import Swal from "sweetalert2";
 import { api } from "../api";
 
 const initialForm = { name: "", bmId: "", accessToken: "" };
@@ -50,10 +51,26 @@ export default function ConfigurationPage() {
   }
 
   async function onDelete(id) {
-    if (!window.confirm("Eliminar configuracion?")) return;
+    const confirm = await Swal.fire({
+      title: "Eliminar configuracion",
+      text: "Esta accion eliminara la configuracion guardada.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Eliminar",
+      cancelButtonText: "Cancelar",
+    });
+    if (!confirm.isConfirmed) return;
+
     setError("");
     try {
       await api.deleteConfig(id);
+      await Swal.fire({
+        title: "Eliminado",
+        text: "La configuracion fue eliminada.",
+        icon: "success",
+        timer: 1400,
+        showConfirmButton: false,
+      });
       await load();
     } catch (err) {
       setError(String(err.message || err));
@@ -78,8 +95,8 @@ export default function ConfigurationPage() {
             rows={3}
           />
           <div className="actions">
-            <button type="submit">{editing ? "Guardar" : "Crear"}</button>
-            {editing ? <button type="button" onClick={() => { setEditing(null); setForm(initialForm); }}>Cancelar</button> : null}
+            <button className="btn btn-success" type="submit">{editing ? "Guardar" : "Crear"}</button>
+            {editing ? <button className="btn btn-primary" type="button" onClick={() => { setEditing(null); setForm(initialForm); }}>Cancelar</button> : null}
           </div>
         </form>
       </section>
@@ -103,8 +120,8 @@ export default function ConfigurationPage() {
                 <td>{c.bm_id}</td>
                 <td>{c.tokenConfigured ? "Configurado" : "No configurado"}</td>
                 <td className="row-actions">
-                  <button onClick={() => onEdit(c)}>Editar</button>
-                  <button onClick={() => onDelete(c._id)}>Eliminar</button>
+                  <button className="btn btn-primary" onClick={() => onEdit(c)}>Editar</button>
+                  <button className="btn btn-danger" onClick={() => onDelete(c._id)}>Eliminar</button>
                 </td>
               </tr>
             ))}

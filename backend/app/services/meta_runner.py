@@ -45,3 +45,17 @@ def bulk_clone_command(campaign_id: str, token: str) -> Tuple[List[str], Dict[st
 def single_clone_command(campaign_ids: List[str], token: str) -> Tuple[List[str], Dict[str, str]]:
     cmd = [PYTHON_BIN, "Meta_clone_fixed.py", "--access-token", token, "--campaign-ids", *campaign_ids]
     return cmd, {}
+
+
+def delete_campaigns_command(campaign_ids: List[str], token: str, batch: int = 10) -> Tuple[List[str], Dict[str, str]]:
+    cmd = [
+        PYTHON_BIN,
+        "meta_ads_delete.py",
+        "--campaign-ids",
+        *campaign_ids,
+        "--access-token",
+        token,
+        "--batch",
+        str(batch),
+    ]
+    return cmd, {}

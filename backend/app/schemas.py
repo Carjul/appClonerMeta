@@ -28,6 +28,12 @@ class SingleCloneRequest(BaseModel):
     campaignIds: List[str]
 
 
+class DeleteCampaignsRequest(BaseModel):
+    configId: str
+    campaignIds: List[str]
+    batch: Optional[int] = 10
+
+
 class JobStartResponse(BaseModel):
     jobId: str
     status: str

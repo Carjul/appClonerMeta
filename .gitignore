@@ -1,6 +1,6 @@
-/node_modules
-/dist
-/build
+frontend/node_modules
+frontend/dist
+frontend/build
 .env
 __pycache__
 *.log
