@@ -1,3 +1,11 @@
+FROM node:20-alpine AS frontend_builder
+
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ ./
+RUN npm run build
+
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -9,6 +17,7 @@ COPY backend/requirements.txt /app/backend/requirements.txt
 RUN pip install --no-cache-dir -r /app/backend/requirements.txt
 
 COPY . /app
+COPY --from=frontend_builder /app/frontend/dist /app/backend/app/static
 
 WORKDIR /app/backend
 

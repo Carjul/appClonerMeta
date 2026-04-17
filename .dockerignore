@@ -6,6 +6,5 @@ __pycache__
 *.pyd
 backend/.env
 frontend/node_modules
-frontend/dist
 backend/app/static
 logs

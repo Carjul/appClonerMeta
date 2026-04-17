@@ -51,17 +51,9 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ## Frontend embebido en backend
 
-Para servir el frontend desde FastAPI:
+El `Dockerfile` ya compila el frontend automaticamente y lo copia en `backend/app/static`, asi que en Render no necesitas copiar archivos manualmente.
 
-```bash
-cd frontend
-npm run build
-cd ..
-mkdir -p backend/app/static
-cp -r frontend/dist/. backend/app/static/
-```
-
-Despues de eso, el backend responde tambien la UI en `/`.
+En ejecucion, FastAPI responde la UI en `/` y los assets en `/assets`.
 
 ## Docker (backend)
 
