@@ -59,7 +59,7 @@ export default function CampaignsPage() {
         setSelectedAccountId("");
         setAccountFilter("all");
         if (cache.cachedAt) {
-          setInfo("Campanas cargadas desde cache de base de datos.");
+          setInfo("Campañas cargadas desde cache de base de datos.");
         }
       } catch (e) {
         setError(String(e.message || e));
@@ -96,7 +96,7 @@ export default function CampaignsPage() {
           return copy;
         });
         setSelectedAccountId("");
-        setInfo("Campanas eliminadas y lista actualizada sin refrescar.");
+        setInfo("Campañas eliminadas y lista actualizada sin refrescar.");
         nextWatch[jobId] = { ...watch, applied: true };
         changed = true;
       }
@@ -194,8 +194,8 @@ export default function CampaignsPage() {
   async function runDeleteCampaigns() {
     if (!configId || selectedIds.length === 0) return;
     const confirm = await Swal.fire({
-      title: "Eliminar campanas",
-      text: `Se eliminaran ${selectedIds.length} campanas seleccionadas.`,
+      title: "Eliminar campañas",
+      text: `Se eliminaran ${selectedIds.length} campañas seleccionadas.`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Si, eliminar",
@@ -370,7 +370,7 @@ export default function CampaignsPage() {
             <button className="btn btn-primary" onClick={runSingle} disabled={selectedIds.length === 0}>Ejecutar single</button>
           </div>
           <div className="mini-card clone-card">
-            <h4>Delete campanas</h4>
+            <h4>Delete campañas</h4>
             <p>Seleccionadas: {selectedIds.length}</p>
             <button className="btn btn-danger" onClick={runDeleteCampaigns} disabled={selectedIds.length === 0}>Eliminar seleccionadas</button>
           </div>

@@ -1,14 +1,27 @@
-const API_BASE = import.meta.env.VITE_API_BASE;
+const API_BASE = (import.meta.env.VITE_API_BASE || window.location.origin).replace(/\/$/, "");
 
 async function req(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
     ...options,
   });
+
+  const contentType = res.headers.get("content-type") || "";
+
   if (!res.ok) {
     const text = await res.text();
     throw new Error(text || `HTTP ${res.status}`);
   }
+
+  if (!contentType.includes("application/json")) {
+    const text = await res.text();
+    throw new Error(`Respuesta no JSON desde API (${res.status}). Revisa VITE_API_BASE. Preview: ${text.slice(0, 120)}`);
+  }
+
   return res.json();
 }
 
