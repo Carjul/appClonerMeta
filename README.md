@@ -27,12 +27,21 @@ cp .env.example .env
 ```
 
 La URI de Mongo se coloca en `backend/.env` en la variable `MONGO_URI`.
+En Render puedes usar `MONGO_URI` o `MONGODB_URI` (ambas funcionan).
 Ejemplo:
 
 ```env
 MONGO_URI=mongodb://localhost:27017
 DB_NAME=meta_automation
 ```
+
+Variables recomendadas en Render:
+
+- `MONGO_URI` (o `MONGODB_URI`)
+- `DB_NAME`
+- `PYTHON_BIN` (opcional)
+
+Render inyecta `PORT` automaticamente; el contenedor ya la usa.
 
 3. Ejecutar API:
 
@@ -66,6 +75,13 @@ Ejecutar contenedor:
 
 ```bash
 docker run --rm -p 8000:8000 --env-file backend/.env meta-backend
+```
+
+Para Render (puerto dinamico), no fijes el puerto en el comando del contenedor.
+El Dockerfile ya usa `PORT` automaticamente:
+
+```bash
+python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
 ```
 
 ## Frontend
