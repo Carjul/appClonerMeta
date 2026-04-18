@@ -466,6 +466,34 @@ th {
   padding: 8px 14px;
 }
 
+.budget-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.budget-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.budget-exec {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #2c4c74;
+  background: rgba(17, 37, 60, 0.7);
+  min-height: 38px;
+}
+
+.budget-run {
+  min-height: 38px;
+}
+
 .switch-wrap {
   display: inline-flex;
   align-items: center;
@@ -726,6 +754,14 @@ th {
   }
 
   .load-btn {
+    width: 100%;
+  }
+
+  .budget-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .budget-run {
     width: 100%;
   }
 

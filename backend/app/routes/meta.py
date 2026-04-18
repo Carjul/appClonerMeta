@@ -1,13 +1,14 @@
 from fastapi import APIRouter, HTTPException
 
 from app.db import configs_col
-from app.schemas import BulkCloneRequest, CampaignStatusRequest, DeleteCampaignsRequest, ExplorerRunRequest, SingleCloneRequest
+from app.schemas import BulkCloneRequest, CampaignStatusRequest, DeleteCampaignsRequest, ExplorerRunRequest, ReduceBudgetsRequest, SingleCloneRequest
 from app.services.job_manager import create_job, get_job
 from app.services.meta_runner import (
     bulk_clone_command,
     campaign_status_command,
     delete_campaigns_command,
     explorer_command,
+    reduce_budgets_command,
     single_clone_command,
 )
 from app.utils import oid
@@ -119,6 +120,50 @@ def run_campaigns_status(payload: CampaignStatusRequest):
         job_type="campaign_status",
         config_id=payload.configId,
         payload={"campaignIds": payload.campaignIds, "status": status, "apiVersion": payload.apiVersion or "v21.0"},
+        cmd=cmd,
+        artifacts=artifacts,
+    )
+
+
+@router.post("/budgets/reduce")
+def run_reduce_budgets(payload: ReduceBudgetsRequest):
+    token_bm1 = None
+    token_bm2 = None
+
+    if payload.tokenConfigIdBm1:
+        cfg1 = _get_config(payload.tokenConfigIdBm1)
+        token_bm1 = cfg1.get("access_token")
+    if payload.tokenConfigIdBm2:
+        cfg2 = _get_config(payload.tokenConfigIdBm2)
+        token_bm2 = cfg2.get("access_token")
+
+    if not token_bm1 and not token_bm2:
+        raise HTTPException(status_code=400, detail="At least one token config is required")
+
+    min_spend = payload.minSpend if payload.minSpend is not None else 5.0
+    target_budget = payload.targetBudget if payload.targetBudget is not None else 1.0
+    if min_spend < 0 or target_budget <= 0:
+        raise HTTPException(status_code=400, detail="Invalid minSpend/targetBudget values")
+
+    cmd, artifacts = reduce_budgets_command(
+        token_bm1=token_bm1,
+        token_bm2=token_bm2,
+        execute=payload.execute,
+        min_spend=min_spend,
+        target_budget=target_budget,
+    )
+
+    config_ref = payload.tokenConfigIdBm1 or payload.tokenConfigIdBm2 or "multi"
+    return create_job(
+        job_type="reduce_budgets",
+        config_id=config_ref,
+        payload={
+            "tokenConfigIdBm1": payload.tokenConfigIdBm1,
+            "tokenConfigIdBm2": payload.tokenConfigIdBm2,
+            "execute": payload.execute,
+            "minSpend": min_spend,
+            "targetBudget": target_budget,
+        },
         cmd=cmd,
         artifacts=artifacts,
     )

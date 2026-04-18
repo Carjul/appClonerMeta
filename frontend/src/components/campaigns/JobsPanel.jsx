@@ -13,7 +13,7 @@ export default function JobsPanel({
   jobLogs,
 }) {
   return (
-    <section className="panel">
+    <section className="panel actions-panel">
       <div className="jobs-head">
         <h3>Jobs</h3>
         {Object.keys(selectedJobs).some((k) => selectedJobs[k]) ? (

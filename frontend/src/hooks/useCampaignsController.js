@@ -20,6 +20,11 @@ export default function useCampaignsController() {
   const [alert, setAlert] = useState(null);
   const [deleteWatch, setDeleteWatch] = useState({});
   const [statusWatch, setStatusWatch] = useState({});
+  const [reduceBm1ConfigId, setReduceBm1ConfigId] = useState("");
+  const [reduceBm2ConfigId, setReduceBm2ConfigId] = useState("");
+  const [reduceExecute, setReduceExecute] = useState(false);
+  const [reduceMinSpend, setReduceMinSpend] = useState("5.0");
+  const [reduceTargetBudget, setReduceTargetBudget] = useState("1.00");
 
   useEffect(() => {
     if (!alert) return undefined;
@@ -282,6 +287,52 @@ export default function useCampaignsController() {
     await openLogs(res.jobId);
   }
 
+  async function runReduceBudgets() {
+    const bm1 = reduceBm1ConfigId || null;
+    const bm2 = reduceBm2ConfigId || null;
+    if (!bm1 && !bm2) {
+      setAlert({ type: "error", message: "Selecciona al menos una configuracion para token BM1 o BM2." });
+      return;
+    }
+
+    const targetBudget = Number(reduceTargetBudget);
+    const minSpend = Number(reduceMinSpend);
+    if (!Number.isFinite(targetBudget) || targetBudget <= 0 || !Number.isFinite(minSpend) || minSpend < 0) {
+      setAlert({ type: "error", message: "Valores invalidos en target budget o min spend." });
+      return;
+    }
+
+    const confirm = await Swal.fire({
+      title: reduceExecute ? "Ejecutar optimizer" : "Dry run optimizer",
+      text: reduceExecute
+        ? "Se aplicaran cambios reales de budget en Meta Ads."
+        : "Se ejecutara en modo simulacion (sin cambios).",
+      icon: reduceExecute ? "warning" : "info",
+      showCancelButton: true,
+      confirmButtonText: reduceExecute ? "Ejecutar" : "Iniciar dry run",
+      cancelButtonText: "Cancelar",
+    });
+    if (!confirm.isConfirmed) return;
+
+    const res = await api.runReduceBudgets({
+      tokenConfigIdBm1: bm1,
+      tokenConfigIdBm2: bm2,
+      execute: reduceExecute,
+      minSpend,
+      targetBudget,
+    });
+
+    setSelectedJobId(res.jobId);
+    setJobLogs([]);
+    await loadJobs();
+    await openLogs(res.jobId);
+
+    setAlert({
+      type: "success",
+      message: reduceExecute ? "Optimizer en ejecucion (EXECUTE)." : "Optimizer en ejecucion (DRY RUN).",
+    });
+  }
+
   async function runSingle() {
     if (!configId || selectedIds.length === 0) return;
     setAlert(null);
@@ -438,6 +489,11 @@ export default function useCampaignsController() {
     selectedIds,
     bulkCampaignId,
     targetStatus,
+    reduceBm1ConfigId,
+    reduceBm2ConfigId,
+    reduceExecute,
+    reduceMinSpend,
+    reduceTargetBudget,
     jobs,
     selectedJobs,
     allJobsSelected,
@@ -448,6 +504,11 @@ export default function useCampaignsController() {
     setExpandAllAccounts,
     setBulkCampaignId,
     setTargetStatus,
+    setReduceBm1ConfigId,
+    setReduceBm2ConfigId,
+    setReduceExecute,
+    setReduceMinSpend,
+    setReduceTargetBudget,
     onChangeAccountFilter,
     toggleCampaign,
     toggleAccountCampaigns,
@@ -458,6 +519,7 @@ export default function useCampaignsController() {
     runSingle,
     runDeleteCampaigns,
     runCampaignStatus,
+    runReduceBudgets,
     removeSelectedJobs,
     openLogs,
     cancel,

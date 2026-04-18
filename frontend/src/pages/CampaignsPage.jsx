@@ -4,6 +4,7 @@ import CampaignsHeader from "../components/campaigns/CampaignsHeader";
 import AccountCampaignsBlock from "../components/campaigns/AccountCampaignsBlock";
 import CampaignActionsPanel from "../components/campaigns/CampaignActionsPanel";
 import JobsPanel from "../components/campaigns/JobsPanel";
+import BudgetOptimizerPanel from "../components/campaigns/BudgetOptimizerPanel";
 import useCampaignsController from "../hooks/useCampaignsController";
 
 export default function CampaignsPage() {
@@ -20,6 +21,11 @@ export default function CampaignsPage() {
     selectedIds,
     bulkCampaignId,
     targetStatus,
+    reduceBm1ConfigId,
+    reduceBm2ConfigId,
+    reduceExecute,
+    reduceMinSpend,
+    reduceTargetBudget,
     jobs,
     selectedJobs,
     allJobsSelected,
@@ -29,6 +35,11 @@ export default function CampaignsPage() {
     setExpandAllAccounts,
     setBulkCampaignId,
     setTargetStatus,
+    setReduceBm1ConfigId,
+    setReduceBm2ConfigId,
+    setReduceExecute,
+    setReduceMinSpend,
+    setReduceTargetBudget,
     onChangeAccountFilter,
     toggleCampaign,
     toggleAccountCampaigns,
@@ -39,6 +50,7 @@ export default function CampaignsPage() {
     runSingle,
     runDeleteCampaigns,
     runCampaignStatus,
+    runReduceBudgets,
     removeSelectedJobs,
     openLogs,
     cancel,
@@ -85,6 +97,21 @@ export default function CampaignsPage() {
         onChangeTargetStatus={setTargetStatus}
         onRunStatus={runCampaignStatus}
         onRunDelete={runDeleteCampaigns}
+      />
+
+      <BudgetOptimizerPanel
+        configs={configs}
+        reduceBm1ConfigId={reduceBm1ConfigId}
+        reduceBm2ConfigId={reduceBm2ConfigId}
+        reduceExecute={reduceExecute}
+        reduceMinSpend={reduceMinSpend}
+        reduceTargetBudget={reduceTargetBudget}
+        onSetReduceBm1ConfigId={setReduceBm1ConfigId}
+        onSetReduceBm2ConfigId={setReduceBm2ConfigId}
+        onSetReduceExecute={setReduceExecute}
+        onSetReduceMinSpend={setReduceMinSpend}
+        onSetReduceTargetBudget={setReduceTargetBudget}
+        onRunReduceBudgets={runReduceBudgets}
       />
 
       <JobsPanel

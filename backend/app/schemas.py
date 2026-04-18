@@ -41,6 +41,14 @@ class CampaignStatusRequest(BaseModel):
     apiVersion: Optional[str] = "v21.0"
 
 
+class ReduceBudgetsRequest(BaseModel):
+    tokenConfigIdBm1: Optional[str] = None
+    tokenConfigIdBm2: Optional[str] = None
+    execute: bool = False
+    minSpend: Optional[float] = 5.0
+    targetBudget: Optional[float] = 1.0
+
+
 class JobStartResponse(BaseModel):
     jobId: str
     status: str

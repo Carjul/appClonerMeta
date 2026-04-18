@@ -79,7 +79,7 @@ export default function ConfigurationPage() {
 
   return (
     <div className="panel-grid">
-      <section className="panel">
+      <section className="panel" style={{ margin:"10px" }}>
         <h3>{editing ? "Editar configuracion" : "Nueva configuracion"}</h3>
         <form onSubmit={onSubmit} className="form-grid">
           <label>Nombre BM</label>
@@ -100,7 +100,7 @@ export default function ConfigurationPage() {
           </div>
         </form>
       </section>
-      <section className="panel">
+      <section className="panel" style={{ margin:"10px" }}>
         <h3>Configuraciones</h3>
         {loading ? <p>Cargando...</p> : null}
         {error ? <p className="error">{error}</p> : null}
