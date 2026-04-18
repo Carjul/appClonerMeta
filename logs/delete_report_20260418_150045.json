@@ -1,0 +1,33 @@
+{
+  "target_type": "campaign",
+  "total": 153,
+  "deleted": 148,
+  "failed": 5,
+  "results": [
+    {
+      "item_id": "120236079630340534",
+      "status": "FAILED",
+      "error": "Invalid parameter"
+    },
+    {
+      "item_id": "120216020690840534",
+      "status": "FAILED",
+      "error": "Invalid parameter"
+    },
+    {
+      "item_id": "120215987610330534",
+      "status": "FAILED",
+      "error": "Invalid parameter"
+    },
+    {
+      "item_id": "120214739189350534",
+      "status": "FAILED",
+      "error": "Invalid parameter"
+    },
+    {
+      "item_id": "120214737421090534",
+      "status": "FAILED",
+      "error": "Invalid parameter"
+    }
+  ]
+}

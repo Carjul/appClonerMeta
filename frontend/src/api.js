@@ -42,7 +42,7 @@ export const api = {
 
   listJobs: () => req("/api/jobs"),
   getJob: (jobId) => req(`/api/jobs/${jobId}`),
-  getJobLogs: (jobId) => req(`/api/jobs/${jobId}/logs`),
+  getJobLogs: (jobId, limit = 5000) => req(`/api/jobs/${jobId}/logs?limit=${limit}`),
   cancelJob: (jobId) => req(`/api/jobs/${jobId}/cancel`, { method: "POST" }),
   deleteJob: (jobId) => req(`/api/jobs/${jobId}`, { method: "DELETE" }),
 };

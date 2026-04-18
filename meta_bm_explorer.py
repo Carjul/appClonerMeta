@@ -36,10 +36,25 @@ ACCESS_TOKEN = args.access_token
 def _get(url: str, params: dict) -> dict:
     """GET con manejo básico de errores."""
     r = requests.get(url, params=params, timeout=30)
-    r.raise_for_status()
+    
+    if r.status_code != 200:
+        try:
+            error_data = r.json()
+            error_msg = error_data.get("error", {})
+            error_code = error_msg.get("code")
+            error_message = error_msg.get("message")
+            error_type = error_msg.get("type")
+            fbtrace = error_msg.get("fbtrace_id")
+            raise RuntimeError(
+                f"API Error [{error_code}]: {error_message} | type: {error_type} | fbtrace: {fbtrace}"
+            )
+        except (ValueError, KeyError):
+            raise RuntimeError(f"HTTP {r.status_code}: {r.text}")
+    
     data = r.json()
     if isinstance(data, dict) and data.get("error"):
-        raise RuntimeError(data["error"].get("message", "API error"))
+        error_msg = data["error"]
+        raise RuntimeError(f"API Error: {error_msg.get('message', str(error_msg))}")
     return data
 
 
@@ -102,7 +117,17 @@ def main():
     print(f"  BM ID: {BM_ID}")
     print(f"{'='*60}\n")
 
-    ad_accounts = get_ad_accounts(BM_ID)
+    try:
+        ad_accounts = get_ad_accounts(BM_ID)
+    except RuntimeError as e:
+        print(f"[ERROR] No se pudieron obtener las cuentas del BM:")
+        print(f"        {e}")
+        print(f"\nPosibles causas:")
+        print(f"  1. Token de acceso expirado o inválido")
+        print(f"  2. Permisos insuficientes (required: ads_management, business_management)")
+        print(f"  3. BM ID incorrecto")
+        print(f"  4. El Business Manager no es accesible con este token")
+        sys.exit(1)
 
     if not ad_accounts:
         print("[!] No se encontraron cuentas de ads para este BM.")

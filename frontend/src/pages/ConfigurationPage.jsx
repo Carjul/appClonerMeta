@@ -104,29 +104,31 @@ export default function ConfigurationPage() {
         <h3>Configuraciones</h3>
         {loading ? <p>Cargando...</p> : null}
         {error ? <p className="error">{error}</p> : null}
-        <table>
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>BM ID</th>
-              <th>Token</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {configs.map((c) => (
-              <tr key={c._id}>
-                <td>{c.name}</td>
-                <td>{c.bm_id}</td>
-                <td>{c.tokenConfigured ? "Configurado" : "No configurado"}</td>
-                <td className="row-actions">
-                  <button className="btn btn-primary" onClick={() => onEdit(c)}>Editar</button>
-                  <button className="btn btn-danger" onClick={() => onDelete(c._id)}>Eliminar</button>
-                </td>
+        <div className="config-table-wrap">
+          <table className="config-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>BM ID</th>
+                <th>Token</th>
+                <th>Acciones</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {configs.map((c) => (
+                <tr key={c._id}>
+                  <td>{c.name}</td>
+                  <td>{c.bm_id}</td>
+                  <td>{c.tokenConfigured ? "Configurado" : "No configurado"}</td>
+                  <td className="row-actions">
+                    <button className="btn btn-primary" onClick={() => onEdit(c)}>Editar</button>
+                    <button className="btn btn-danger" onClick={() => onDelete(c._id)}>Eliminar</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   );

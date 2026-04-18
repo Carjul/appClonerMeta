@@ -262,7 +262,7 @@ def get_job(job_id: str) -> Optional[Dict[str, Any]]:
     return serialize_doc(jobs_col.find_one({"_id": oid(job_id)}))
 
 
-def get_job_logs(job_id: str, limit: int = 500) -> List[Dict[str, Any]]:
+def get_job_logs(job_id: str, limit: int = 5000) -> List[Dict[str, Any]]:
     cur = job_logs_col.find({"job_id": job_id}).sort("timestamp", 1).limit(limit)
     return [serialize_doc(d) for d in cur]
 

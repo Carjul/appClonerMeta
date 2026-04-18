@@ -29,7 +29,7 @@ export default function App() {
         </div>
       </header>
       <main className="content">
-        <h2>{title}</h2>
+{/*         <h2>{title}</h2> */}
         {tab === "configs" ? <ConfigurationPage /> : <CampaignsPage />}
       </main>
     </div>

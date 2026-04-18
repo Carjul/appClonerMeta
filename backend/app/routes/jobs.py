@@ -19,8 +19,12 @@ def jobs_get(job_id: str):
 
 
 @router.get("/{job_id}/logs")
-def jobs_logs(job_id: str):
-    return get_job_logs(job_id)
+def jobs_logs(job_id: str, limit: int = 5000):
+    if limit < 1:
+        limit = 1
+    if limit > 20000:
+        limit = 20000
+    return get_job_logs(job_id, limit=limit)
 
 
 @router.post("/{job_id}/cancel")

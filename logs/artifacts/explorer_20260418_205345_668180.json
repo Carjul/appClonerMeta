@@ -1,0 +1,552 @@
+[
+  {
+    "account_id": "act_2458547414547438",
+    "account_name": "MARTHA 5",
+    "status": 2,
+    "origen": "owned",
+    "campaigns": []
+  },
+  {
+    "account_id": "act_708152401990591",
+    "account_name": "MARTHA 4",
+    "status": 1,
+    "origen": "owned",
+    "campaigns": []
+  },
+  {
+    "account_id": "act_1474139290589410",
+    "account_name": "MARTHA 3",
+    "status": 1,
+    "origen": "owned",
+    "campaigns": []
+  },
+  {
+    "account_id": "act_528756616577904",
+    "account_name": "MARTHA 2",
+    "status": 1,
+    "origen": "owned",
+    "campaigns": []
+  },
+  {
+    "account_id": "act_1037309266927320",
+    "account_name": "MARTHA 1",
+    "status": 1,
+    "origen": "owned",
+    "campaigns": [
+      {
+        "id": "120241921713960534",
+        "name": "[ABO]-[lpjaro]-[Ventas]-[VID]+[IMG]",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241921605200534",
+        "name": "[ABO]-[lpjaro]-[Ventas]-[VID]+[IMG]",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120236079630340534",
+        "name": "[ABO]-[lpjaro]-[Ventas]-[VID]+[IMG]",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120216020690840534",
+        "name": "BM3C1_CBO_MARTA_1_MGK_09_03_2025",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120215987610330534",
+        "name": "BM3C1_CBO_MARTA_1_MGK_8_03_2025",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120214739189350534",
+        "name": "BM3C1_CBO_MARTHA_1_FG_20_02_2025_2",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120214737421090534",
+        "name": "BM3C1_CBO_MARTHA_1_FG_20_02_2025_1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      }
+    ]
+  },
+  {
+    "account_id": "act_1027335185283047",
+    "account_name": "GM-177 - RP Genus - Aks - LOC",
+    "status": 2,
+    "origen": "client",
+    "campaigns": [
+      {
+        "id": "120244205645570392",
+        "name": "[Giao Nhung]-[03_L1_V10]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      }
+    ]
+  },
+  {
+    "account_id": "act_2121935234933980",
+    "account_name": "RPG 15 (Ring)",
+    "status": 1,
+    "origen": "client",
+    "campaigns": [
+      {
+        "id": "120241594959440027",
+        "name": "HazelBriggs-Nurse-Testimonial-#5",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241594888680027",
+        "name": "HazelBriggs-Nurse-Testimonial-#4",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241594793200027",
+        "name": "HazelBriggs-Nurse-Testimonial-#3",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241594695010027",
+        "name": "HazelBriggs-Nurse-Testimonial-#2",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241567543570027",
+        "name": "[Giả Hạnh}-[10-waitress-tips]-[17/04/2026]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241567488590027",
+        "name": "[Dương Nữ}-[09-retiree-bills]-[17/04/2026]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241567446550027",
+        "name": "[Hoàng Khê}-[08-warehouse-worker]-[17/04/2026]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241566824150027",
+        "name": "[Giao Ly}-[07-teacher-grading]-[17/04/2026]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241558333600027",
+        "name": "[Giáp Giang}-[06-uber-driver]-[17/04/2026]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241446207330027",
+        "name": "HazelBriggs-Nurse-Testimonial-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241445966640027",
+        "name": "VictoriaVaughn-SingleMom-Testimonial-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241445966620027",
+        "name": "HannahBrooks-Construction-Testimonial-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241445966610027",
+        "name": "AutumnRhodes-Walmart-Testimonial-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120241445966600027",
+        "name": "TobiasVictor-Grocery-Testimonial-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      }
+    ]
+  },
+  {
+    "account_id": "act_1247132143392586",
+    "account_name": "THM-60 - RP Genus - Aks - LOC",
+    "status": 1,
+    "origen": "client",
+    "campaigns": []
+  },
+  {
+    "account_id": "act_1985532452249785",
+    "account_name": "THM-32 - RP Genus - Aks - LOC",
+    "status": 1,
+    "origen": "client",
+    "campaigns": [
+      {
+        "id": "120248547169320273",
+        "name": "[Giao Chi]-[03_L1_V20]-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120248544662920273",
+        "name": "[Giang Giao]-[03_L1_V19]-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120248543057410273",
+        "name": "[Giao Diệp]-[03_L1_V18]-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120248540083340273",
+        "name": "[Giang Lợi]-[03_L1_V17]-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120248481355090273",
+        "name": "[Hoàng Chinh]-[03_L1_V16]-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      }
+    ]
+  },
+  {
+    "account_id": "act_1594785768155717",
+    "account_name": "THM-54 - RP Genus - Aks - LOC",
+    "status": 1,
+    "origen": "client",
+    "campaigns": []
+  },
+  {
+    "account_id": "act_1350450750037777",
+    "account_name": "THM-197 - RP Genus - Aks - LOC",
+    "status": 3,
+    "origen": "client",
+    "campaigns": [
+      {
+        "id": "120240762038340638",
+        "name": "[D-Offer]-[Ashley Morgan]-[V1_Agres_ V1]-#5",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120240761995670638",
+        "name": "[D-Offer]-[Ashley Morgan]-[V1_Agres_ V1]-#4",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120240761957450638",
+        "name": "[D-Offer]-[Ashley Morgan]-[V1_Agres_ V1]-#3",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120240761909090638",
+        "name": "[D-Offer]-[Ashley Morgan]-[V1_Agres_ V1]-#2",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120240760228430638",
+        "name": "[D-Offer]-[Samantha Hayes]-[G_Agress_V5]-#5",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120240760228410638",
+        "name": "[D-Offer]-[Samantha Hayes]-[G_Agress_V5]-#4",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120240760228400638",
+        "name": "[D-Offer]-[Samantha Hayes]-[G_Agress_V5]-#3",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120240760228310638",
+        "name": "[D-Offer]-[Samantha Hayes]]-[G_Agress_V5]-#2",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120240752098260638",
+        "name": "[D-Offer]-[Samantha Hayes]-[G_Agress_V5]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120240751957090638",
+        "name": "[D-Offer]-[Ashley Morgan]-[V1_Agres_ V1]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120240645639000638",
+        "name": "[D-Offer]-[Emily Carter]-[G_Agress_V5]-#5",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120240645322390638",
+        "name": "[D-Offer]-[Emily Carter]-[G_Agress_V5]-#4",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120240643669410638",
+        "name": "[D-Offer]-[Emily Carter]-[G_Agress_V5]-#3",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120240643358290638",
+        "name": "[D-Offer]-[Emily Carter]-[G_Agress_V5]-#2",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120240639786000638",
+        "name": "[D-Offer]-[Adeline Jennifer]-[  V1_Agres_ V1]-#5",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120240635949890638",
+        "name": "[D-Offer]-[Adeline Jennifer]-[  V1_Agres_ V1]-#4",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120240635344920638",
+        "name": "[D-Offer]-[Adeline Jennifer]-[  V1_Agres_ V1]-#3",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120240634874830638",
+        "name": "[D-Offer]-[Adeline Jennifer]-[  V1_Agres_ V1]-#2",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120240472851400638",
+        "name": "[D-Offer]-[Adeline Jennifer]-[  V1_Agres_ V1]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120240461373870638",
+        "name": "[D-Offer]-[Emily Carter]-[G_Agress_V5]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      }
+    ]
+  },
+  {
+    "account_id": "act_1540233950717702",
+    "account_name": "THM-72 - RP Genus - Aks - LOC",
+    "status": 1,
+    "origen": "client",
+    "campaigns": [
+      {
+        "id": "120244737815600530",
+        "name": "[Skyler Reed]-[S1_Agress_Video 4]-#5",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244737701720530",
+        "name": "[Skyler Reed]-[S1_Agress_Video 4]-#4",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244737645790530",
+        "name": "[Skyler Reed]-[S1_Agress_Video 4]-#3",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244737582200530",
+        "name": "[Skyler Reed]-[S1_Agress_Video 4]-#2",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244735659730530",
+        "name": "[Skyler Reed]-[S1_Agress_Video 4]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244731903530530",
+        "name": "[Giao Chinh]-[S1_Agress_Video 4]-#4",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244731821720530",
+        "name": "[Giao Chinh]-[S1_Agress_Video 4]-#3",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244731446250530",
+        "name": "[Giao Chinh]-[S1_Agress_Video 4]-#2",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244570623820530",
+        "name": "[Giao Chinh]-[S1_Agress_Video 4]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244301390670530",
+        "name": "[Giao Chinh]-[S1_Agress_Video 4]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      }
+    ]
+  },
+  {
+    "account_id": "act_1074066461137769",
+    "account_name": "THM-113 - RP Genus - Aks - LOC",
+    "status": 1,
+    "origen": "client",
+    "campaigns": [
+      {
+        "id": "120244734205000717",
+        "name": "[Giang Huyền]-[RP_02]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244637814440717",
+        "name": "[Giả Lợi]-[RP_02]-#5",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244637412420717",
+        "name": "[Giả Lợi]-[RP_02]-#4",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244636998040717",
+        "name": "[Giả Lợi]-[RP_02]-#3",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244636734900717",
+        "name": "[Giả Lợi]-[RP_02]-#2",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244538403250717",
+        "name": "[Giả Lợi]-[RP_02]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120244538104020717",
+        "name": "[Giao Du]-[RP_01]-#1",
+        "status": "PAUSED",
+        "objective": "OUTCOME_SALES"
+      }
+    ]
+  },
+  {
+    "account_id": "act_1059904599553927",
+    "account_name": "THM-200 - RP Genus - Aks - LOC",
+    "status": 1,
+    "origen": "client",
+    "campaigns": [
+      {
+        "id": "120247754436080699",
+        "name": "[Giang Nương]-[03_L2_V22]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120247754388430699",
+        "name": "[Giang Như]-[03_L2_V17]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120247754350520699",
+        "name": "[Dương Kim]-[03_L2_V12]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120247754309250699",
+        "name": "[Cleo Fletcher]-[03_L2_V7]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120247754146850699",
+        "name": "[Huỳnh Cúc]-[03_L2_V2]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120247645279520699",
+        "name": "[Peyton Cole ]-[03_L2_V21]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120247645211710699",
+        "name": "[Samantha Hayes]-[03_L2_V16]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120247645121390699",
+        "name": "[Piper West ]-[03_L2_V11]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120247643455090699",
+        "name": "[Zoey Dalton]-[03_L2_V6]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      },
+      {
+        "id": "120247636810850699",
+        "name": "[Vienna Frost]-[03_L2_V1]-#1",
+        "status": "ACTIVE",
+        "objective": "OUTCOME_SALES"
+      }
+    ]
+  }
+]
