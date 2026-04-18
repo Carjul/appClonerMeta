@@ -38,6 +38,7 @@ export const api = {
   runBulk: (configId, campaignId) => req("/api/clone/bulk", { method: "POST", body: JSON.stringify({ configId, campaignId }) }),
   runSingle: (configId, campaignIds) => req("/api/clone/single", { method: "POST", body: JSON.stringify({ configId, campaignIds }) }),
   deleteCampaigns: (configId, campaignIds, batch = 10) => req("/api/delete/campaigns", { method: "POST", body: JSON.stringify({ configId, campaignIds, batch }) }),
+  updateCampaignsStatus: (configId, campaignIds, status, apiVersion = "v21.0") => req("/api/campaigns/status", { method: "POST", body: JSON.stringify({ configId, campaignIds, status, apiVersion }) }),
 
   listJobs: () => req("/api/jobs"),
   getJob: (jobId) => req(`/api/jobs/${jobId}`),

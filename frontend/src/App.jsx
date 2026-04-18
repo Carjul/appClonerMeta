@@ -13,10 +13,19 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <h1>Meta Clonación</h1>
+        <h1 className="brand-title">
+          <img className="brand-icon" src="/favicon.svg" alt="Meta Clonación" />
+          <span>Meta Tool</span>
+        </h1>
         <div className="tabs">
-          <button className={tab === "campaigns" ? "active" : ""} onClick={() => setTab("campaigns")}>Campañas</button>
-          <button className={tab === "configs" ? "active" : ""} onClick={() => setTab("configs")}>Configuración</button>
+          <button className={`nav-tab ${tab === "campaigns" ? "active" : ""}`} onClick={() => setTab("campaigns")}>
+            <span className="nav-icon" aria-hidden="true">📣</span>
+            <span>Campañas</span>
+          </button>
+          <button className={`nav-tab ${tab === "configs" ? "active" : ""}`} onClick={() => setTab("configs")}>
+            <span className="nav-icon" aria-hidden="true">⚙️</span>
+            <span>Configuración</span>
+          </button>
         </div>
       </header>
       <main className="content">

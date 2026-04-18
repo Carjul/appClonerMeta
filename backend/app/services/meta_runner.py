@@ -59,3 +59,19 @@ def delete_campaigns_command(campaign_ids: List[str], token: str, batch: int = 1
         str(batch),
     ]
     return cmd, {}
+
+
+def campaign_status_command(campaign_ids: List[str], token: str, status: str, api_version: str = "v21.0") -> Tuple[List[str], Dict[str, str]]:
+    cmd = [
+        PYTHON_BIN,
+        "meta_campaign_status.py",
+        "--campaign-ids",
+        *campaign_ids,
+        "--access-token",
+        token,
+        "--status",
+        status,
+        "--api-version",
+        api_version,
+    ]
+    return cmd, {}

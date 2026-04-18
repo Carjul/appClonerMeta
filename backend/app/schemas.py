@@ -34,6 +34,13 @@ class DeleteCampaignsRequest(BaseModel):
     batch: Optional[int] = 10
 
 
+class CampaignStatusRequest(BaseModel):
+    configId: str
+    campaignIds: List[str]
+    status: str = Field(pattern="^(ACTIVE|PAUSED)$")
+    apiVersion: Optional[str] = "v21.0"
+
+
 class JobStartResponse(BaseModel):
     jobId: str
     status: str

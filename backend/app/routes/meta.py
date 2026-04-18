@@ -1,9 +1,15 @@
 from fastapi import APIRouter, HTTPException
 
 from app.db import configs_col
-from app.schemas import BulkCloneRequest, DeleteCampaignsRequest, ExplorerRunRequest, SingleCloneRequest
+from app.schemas import BulkCloneRequest, CampaignStatusRequest, DeleteCampaignsRequest, ExplorerRunRequest, SingleCloneRequest
 from app.services.job_manager import create_job, get_job
-from app.services.meta_runner import bulk_clone_command, delete_campaigns_command, explorer_command, single_clone_command
+from app.services.meta_runner import (
+    bulk_clone_command,
+    campaign_status_command,
+    delete_campaigns_command,
+    explorer_command,
+    single_clone_command,
+)
 from app.utils import oid
 
 router = APIRouter(prefix="/api", tags=["meta"])
@@ -89,6 +95,30 @@ def run_delete_campaigns(payload: DeleteCampaignsRequest):
         job_type="delete_campaigns",
         config_id=payload.configId,
         payload={"campaignIds": payload.campaignIds, "batch": payload.batch or 10},
+        cmd=cmd,
+        artifacts=artifacts,
+    )
+
+
+@router.post("/campaigns/status")
+def run_campaigns_status(payload: CampaignStatusRequest):
+    if not payload.campaignIds:
+        raise HTTPException(status_code=400, detail="campaignIds is required")
+    status = payload.status.upper()
+    if status not in ("ACTIVE", "PAUSED"):
+        raise HTTPException(status_code=400, detail="status must be ACTIVE or PAUSED")
+
+    cfg = _get_config(payload.configId)
+    cmd, artifacts = campaign_status_command(
+        payload.campaignIds,
+        cfg["access_token"],
+        status,
+        payload.apiVersion or "v21.0",
+    )
+    return create_job(
+        job_type="campaign_status",
+        config_id=payload.configId,
+        payload={"campaignIds": payload.campaignIds, "status": status, "apiVersion": payload.apiVersion or "v21.0"},
         cmd=cmd,
         artifacts=artifacts,
     )

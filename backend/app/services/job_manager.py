@@ -84,6 +84,20 @@ def _progress_from_line(job_type: str, payload: Dict[str, Any], line: str, count
         percent = min(99, int(done * 100 / total))
         return {"percent": percent, "message": f"Eliminadas {done}/{total}"}
 
+    if job_type == "campaign_status":
+        total = max(1, len(payload.get("campaignIds", [])))
+        if "[OK]" in text and "Campaña" in text and "actualizada" in text:
+            counters["done"] = counters.get("done", 0) + 1
+        if "[INFO]" in text and "ya tiene estatus" in text:
+            counters["done"] = counters.get("done", 0) + 1
+        if "[FAIL]" in text and "No se pudo validar" in text:
+            counters["done"] = counters.get("done", 0) + 1
+        if "[FAIL]" in text and "Error actualizando" in text:
+            counters["done"] = counters.get("done", 0) + 1
+        done = counters.get("done", 0)
+        percent = min(99, int(done * 100 / total))
+        return {"percent": percent, "message": f"Status {done}/{total}"}
+
     return None
 
 
@@ -164,6 +178,33 @@ def _run_job_thread(job_id: str, job_type: str, payload: Dict[str, Any], cmd: Li
                         acc_copy = dict(acc)
                         campaigns = acc_copy.get("campaigns", [])
                         acc_copy["campaigns"] = [c for c in campaigns if c.get("id") not in campaign_ids]
+                        new_accounts.append(acc_copy)
+                    configs_col.update_one(
+                        {"_id": oid(config_id)},
+                        {
+                            "$set": {
+                                "explorer_accounts": new_accounts,
+                                "explorer_cached_at": now_iso(),
+                            }
+                        },
+                    )
+
+            if job_type == "campaign_status" and config_id:
+                campaign_ids = set(payload.get("campaignIds", []))
+                target_status = (payload.get("status") or "").upper()
+                cfg = configs_col.find_one({"_id": oid(config_id)}, {"explorer_accounts": 1})
+                accounts = (cfg or {}).get("explorer_accounts", [])
+                if accounts and campaign_ids and target_status in ("ACTIVE", "PAUSED"):
+                    new_accounts = []
+                    for acc in accounts:
+                        acc_copy = dict(acc)
+                        campaigns = []
+                        for c in acc_copy.get("campaigns", []):
+                            c_copy = dict(c)
+                            if c_copy.get("id") in campaign_ids:
+                                c_copy["status"] = target_status
+                            campaigns.append(c_copy)
+                        acc_copy["campaigns"] = campaigns
                         new_accounts.append(acc_copy)
                     configs_col.update_one(
                         {"_id": oid(config_id)},
