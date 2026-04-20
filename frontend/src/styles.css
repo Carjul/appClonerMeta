@@ -406,20 +406,20 @@ th {
 }
 
 .alert-success {
-  color: #b8ffd8;
-  background: rgba(31, 191, 117, 0.32);
+  color: #143623;
+  background: rgb(31, 191, 116);
   border-color: rgba(31, 191, 117, 0.62);
 }
 
 .alert-info {
-  color: #c7e1ff;
-  background: rgba(47, 116, 255, 0.30);
+  color: #48515b;
+  background: rgb(47, 116, 255);
   border-color: rgba(47, 116, 255, 0.62);
 }
 
 .alert-error {
-  color: #ffd0d0;
-  background: rgba(227, 77, 77, 0.30);
+  color: #563e3e;
+  background: rgb(227, 77, 77);
   border-color: rgba(227, 77, 77, 0.62);
 }
 

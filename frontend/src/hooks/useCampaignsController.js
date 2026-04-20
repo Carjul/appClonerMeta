@@ -261,6 +261,7 @@ export default function useCampaignsController() {
     setSelectedJobId(jobId);
     const logs = await api.getJobLogs(jobId, 20000);
     setJobLogs(logs);
+    location.href = "#lb";
   }
 
   async function runExplorer() {

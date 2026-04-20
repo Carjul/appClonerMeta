@@ -85,7 +85,7 @@ export default function JobsPanel({
         </table>
       </div>
 
-      <div className="logs-box">
+      <div className="logs-box" id="lb">
         <h4>Logs job {selectedJobId ? selectedJobId.slice(-8) : "-"}</h4>
         <pre className="logs-stream">
           {jobLogs.map((l, idx) => (

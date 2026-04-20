@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import subprocess
 import threading
 from typing import Any, Dict, List, Optional
@@ -18,6 +19,33 @@ from app.utils import now_iso, oid, serialize_doc
 
 _proc_lock = threading.Lock()
 _processes: Dict[str, subprocess.Popen] = {}
+
+
+def _to_abs_path(path: str) -> str:
+    if os.path.isabs(path):
+        return path
+    return os.path.abspath(os.path.join(ROOT_DIR, path))
+
+
+def _extract_file_path_from_line(line: str) -> Optional[str]:
+    text = line.strip()
+    if not text:
+        return None
+
+    patterns = [
+        r"Resultado guardado en:\s*(.+)$",
+        r"Resultados guardados en:\s*(.+)$",
+        r"Report:\s*(.+)$",
+        r"Log guardado en:\s*(.+)$",
+        r"State\s*:\s*(.+)$",
+        r"Log CSV\s*:\s*(.+)$",
+        r"Log\s*:\s*(.+)$",
+    ]
+    for pattern in patterns:
+        m = re.search(pattern, text)
+        if m:
+            return m.group(1).strip().strip('"')
+    return None
 
 
 def _append_log(job_id: str, level: str, message: str) -> None:
@@ -113,6 +141,11 @@ def _run_job_thread(job_id: str, job_type: str, payload: Dict[str, Any], cmd: Li
     _update_job(job_id, {"status": "running", "started_at": now_iso()})
     _append_log(job_id, "INFO", f"Starting command: {' '.join(cmd)}")
 
+    generated_paths = set()
+    for value in (artifacts or {}).values():
+        if isinstance(value, str) and value:
+            generated_paths.add(_to_abs_path(value))
+
     proc = subprocess.Popen(
         cmd,
         cwd=ROOT_DIR,
@@ -132,6 +165,9 @@ def _run_job_thread(job_id: str, job_type: str, payload: Dict[str, Any], cmd: Li
         if proc.stdout:
             for line in proc.stdout:
                 _append_log(job_id, "INFO", line)
+                file_path = _extract_file_path_from_line(line)
+                if file_path:
+                    generated_paths.add(_to_abs_path(file_path))
                 progress = _progress_from_line(job_type, payload, line, counters)
                 if progress:
                     _update_job(job_id, {"progress": progress})
@@ -158,6 +194,9 @@ def _run_job_thread(job_id: str, job_type: str, payload: Dict[str, Any], cmd: Li
         elif rc == 0:
             updates = {"status": "completed", "finished_at": now_iso(), "return_code": rc}
             updates["progress"] = {"percent": 100, "message": "Completado"}
+            existing_files = [p for p in sorted(generated_paths) if os.path.isfile(p)]
+            if existing_files:
+                updates["output_files"] = existing_files
             if result_payload is not None:
                 updates["result"] = result_payload
             _update_job(job_id, updates)
@@ -286,11 +325,29 @@ def cancel_job(job_id: str) -> Dict[str, Any]:
 
 
 def delete_job(job_id: str) -> Dict[str, Any]:
+    job_doc = jobs_col.find_one({"_id": oid(job_id)})
+
     with _proc_lock:
         proc = _processes.get(job_id)
     if proc and proc.poll() is None:
         proc.terminate()
         _append_log(job_id, "WARN", "Delete requested. Process terminated.")
+
+    file_candidates = set()
+    if job_doc:
+        for p in job_doc.get("output_files", []) or []:
+            if isinstance(p, str) and p:
+                file_candidates.add(_to_abs_path(p))
+        for p in (job_doc.get("artifacts", {}) or {}).values():
+            if isinstance(p, str) and p:
+                file_candidates.add(_to_abs_path(p))
+
+    for path in file_candidates:
+        try:
+            if os.path.isfile(path):
+                os.remove(path)
+        except Exception:
+            pass
 
     jobs_col.delete_one({"_id": oid(job_id)})
     job_logs_col.delete_many({"job_id": job_id})
