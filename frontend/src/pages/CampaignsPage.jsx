@@ -52,6 +52,7 @@ export default function CampaignsPage() {
     runCampaignStatus,
     runReduceBudgets,
     removeSelectedJobs,
+    rerunSelectedJobs,
     openLogs,
     cancel,
     copyCampaignId,
@@ -121,6 +122,7 @@ export default function CampaignsPage() {
         onToggleAllJobs={toggleAllJobs}
         onToggleJobSelection={toggleJobSelection}
         onRemoveSelectedJobs={removeSelectedJobs}
+        onRerunSelectedJobs={rerunSelectedJobs}
         onOpenLogs={openLogs}
         onCancelJob={cancel}
         selectedJobId={selectedJobId}

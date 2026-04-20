@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 
-from app.services.job_manager import cancel_job, delete_job, get_job, get_job_logs, list_jobs
+from app.services.job_manager import cancel_job, delete_job, get_job, get_job_logs, list_jobs, rerun_job
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 
@@ -41,3 +41,14 @@ def jobs_delete(job_id: str):
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     return delete_job(job_id)
+
+
+@router.post("/{job_id}/rerun")
+def jobs_rerun(job_id: str):
+    job = get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    try:
+        return rerun_job(job_id)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))

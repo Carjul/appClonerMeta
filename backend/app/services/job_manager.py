@@ -5,7 +5,15 @@ import threading
 from typing import Any, Dict, List, Optional
 
 from app.db import configs_col, job_logs_col, jobs_col
-from app.services.meta_runner import ROOT_DIR
+from app.services.meta_runner import (
+    ROOT_DIR,
+    bulk_clone_command,
+    campaign_status_command,
+    delete_campaigns_command,
+    explorer_command,
+    reduce_budgets_command,
+    single_clone_command,
+)
 from app.utils import now_iso, oid, serialize_doc
 
 _proc_lock = threading.Lock()
@@ -287,3 +295,89 @@ def delete_job(job_id: str) -> Dict[str, Any]:
     jobs_col.delete_one({"_id": oid(job_id)})
     job_logs_col.delete_many({"job_id": job_id})
     return {"jobId": job_id, "deleted": True}
+
+
+def _get_config_token(config_id: str) -> Optional[str]:
+    if not config_id:
+        return None
+    cfg = configs_col.find_one({"_id": oid(config_id)}, {"access_token": 1})
+    return (cfg or {}).get("access_token")
+
+
+def _rebuild_job_command(job_doc: Dict[str, Any]) -> tuple[List[str], Dict[str, str]]:
+    job_type = job_doc.get("type")
+    payload = job_doc.get("payload", {}) or {}
+    config_id = str(job_doc.get("config_id") or "")
+
+    if job_type == "explorer":
+        token = _get_config_token(config_id)
+        bm_id = payload.get("bmId")
+        if not token or not bm_id:
+            raise RuntimeError("Missing token or bmId for explorer rerun")
+        return explorer_command(bm_id, token)
+
+    if job_type == "bulk_clone":
+        token = _get_config_token(config_id)
+        campaign_id = payload.get("campaignId")
+        if not token or not campaign_id:
+            raise RuntimeError("Missing token or campaignId for bulk_clone rerun")
+        return bulk_clone_command(campaign_id, token)
+
+    if job_type == "single_clone":
+        token = _get_config_token(config_id)
+        campaign_ids = payload.get("campaignIds", [])
+        if not token or not campaign_ids:
+            raise RuntimeError("Missing token or campaignIds for single_clone rerun")
+        return single_clone_command(campaign_ids, token)
+
+    if job_type == "delete_campaigns":
+        token = _get_config_token(config_id)
+        campaign_ids = payload.get("campaignIds", [])
+        batch = int(payload.get("batch", 10) or 10)
+        if not token or not campaign_ids:
+            raise RuntimeError("Missing token or campaignIds for delete_campaigns rerun")
+        return delete_campaigns_command(campaign_ids, token, batch=batch)
+
+    if job_type == "campaign_status":
+        token = _get_config_token(config_id)
+        campaign_ids = payload.get("campaignIds", [])
+        status = payload.get("status")
+        api_version = payload.get("apiVersion", "v21.0")
+        if not token or not campaign_ids or not status:
+            raise RuntimeError("Missing token/campaignIds/status for campaign_status rerun")
+        return campaign_status_command(campaign_ids, token, status=status, api_version=api_version)
+
+    if job_type == "reduce_budgets":
+        bm1_id = payload.get("tokenConfigIdBm1")
+        bm2_id = payload.get("tokenConfigIdBm2")
+        token_bm1 = _get_config_token(bm1_id) if bm1_id else None
+        token_bm2 = _get_config_token(bm2_id) if bm2_id else None
+        execute = bool(payload.get("execute", False))
+        min_spend = float(payload.get("minSpend", 5.0) or 5.0)
+        target_budget = float(payload.get("targetBudget", 1.0) or 1.0)
+        if not token_bm1 and not token_bm2:
+            raise RuntimeError("Missing tokens for reduce_budgets rerun")
+        return reduce_budgets_command(
+            token_bm1=token_bm1,
+            token_bm2=token_bm2,
+            execute=execute,
+            min_spend=min_spend,
+            target_budget=target_budget,
+        )
+
+    raise RuntimeError(f"Unsupported job type for rerun: {job_type}")
+
+
+def rerun_job(job_id: str) -> Dict[str, Any]:
+    job_doc = jobs_col.find_one({"_id": oid(job_id)})
+    if not job_doc:
+        raise RuntimeError("Job not found")
+
+    cmd, artifacts = _rebuild_job_command(job_doc)
+    return create_job(
+        job_type=job_doc.get("type", "unknown"),
+        config_id=job_doc.get("config_id", ""),
+        payload=job_doc.get("payload", {}) or {},
+        cmd=cmd,
+        artifacts=artifacts,
+    )

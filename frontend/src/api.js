@@ -45,5 +45,6 @@ export const api = {
   getJob: (jobId) => req(`/api/jobs/${jobId}`),
   getJobLogs: (jobId, limit = 5000) => req(`/api/jobs/${jobId}/logs?limit=${limit}`),
   cancelJob: (jobId) => req(`/api/jobs/${jobId}/cancel`, { method: "POST" }),
+  rerunJob: (jobId) => req(`/api/jobs/${jobId}/rerun`, { method: "POST" }),
   deleteJob: (jobId) => req(`/api/jobs/${jobId}`, { method: "DELETE" }),
 };

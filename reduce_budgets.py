@@ -26,10 +26,11 @@ import io
 import json
 import os
 import sys
+import time
 from datetime import datetime, timedelta, timezone
 from urllib.request import Request, urlopen
 from urllib.parse import urlencode
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
@@ -80,6 +81,8 @@ TARGET_BUDGET_CENTS = 100    # $1.00 en centavos
 BUMP_BUDGET_CENTS = 105      # $1.05 en centavos (para ad sets que no gastan)
 MIN_SPEND_TO_REDUCE = 5.0    # Mínimo $5 de gasto total para aplicar reducción
 MIN_AGE_HOURS = 48           # No tocar campañas con menos de 48 horas
+HTTP_TIMEOUT = 30
+NETWORK_RETRIES = 3
 
 
 # ─── Helpers de API ──────────────────────────────────────────────────────────
@@ -94,13 +97,29 @@ def api_get(path: str, token: str, params: dict = None) -> dict:
     url += f"{separator}access_token={token}"
 
     req = Request(url, method="GET")
-    try:
-        with urlopen(req, timeout=30) as resp:
-            return json.loads(resp.read().decode())
-    except HTTPError as e:
-        body = e.read().decode() if e.fp else ""
-        print(f"  WARN API Error {e.code} en GET {path}: {body[:200]}")
-        return {}
+    for attempt in range(NETWORK_RETRIES + 1):
+        try:
+            with urlopen(req, timeout=HTTP_TIMEOUT) as resp:
+                return json.loads(resp.read().decode())
+        except HTTPError as e:
+            body = e.read().decode() if e.fp else ""
+            print(f"  WARN API Error {e.code} en GET {path}: {body[:200]}")
+            if e.code in (429, 500, 502, 503, 504) and attempt < NETWORK_RETRIES:
+                time.sleep(1.5 * (attempt + 1))
+                continue
+            return {}
+        except (URLError, TimeoutError, OSError) as e:
+            if attempt < NETWORK_RETRIES:
+                wait = 1.5 * (attempt + 1)
+                print(f"  WARN NET Error GET {path}: {e} (retry {attempt + 1}/{NETWORK_RETRIES}, wait {wait:.1f}s)")
+                time.sleep(wait)
+                continue
+            print(f"  WARN NET Error GET {path}: {e}")
+            return {}
+        except Exception as e:
+            print(f"  WARN Unexpected GET {path}: {e}")
+            return {}
+    return {}
 
 
 def api_post(endpoint: str, token: str, data: dict) -> dict:
@@ -110,13 +129,29 @@ def api_post(endpoint: str, token: str, data: dict) -> dict:
     encoded = urlencode(data).encode()
 
     req = Request(url, data=encoded, method="POST")
-    try:
-        with urlopen(req, timeout=30) as resp:
-            return json.loads(resp.read().decode())
-    except HTTPError as e:
-        body = e.read().decode() if e.fp else ""
-        print(f"  WARN API Error {e.code} en POST {endpoint}: {body[:200]}")
-        return {}
+    for attempt in range(NETWORK_RETRIES + 1):
+        try:
+            with urlopen(req, timeout=HTTP_TIMEOUT) as resp:
+                return json.loads(resp.read().decode())
+        except HTTPError as e:
+            body = e.read().decode() if e.fp else ""
+            print(f"  WARN API Error {e.code} en POST {endpoint}: {body[:200]}")
+            if e.code in (429, 500, 502, 503, 504) and attempt < NETWORK_RETRIES:
+                time.sleep(1.5 * (attempt + 1))
+                continue
+            return {}
+        except (URLError, TimeoutError, OSError) as e:
+            if attempt < NETWORK_RETRIES:
+                wait = 1.5 * (attempt + 1)
+                print(f"  WARN NET Error POST {endpoint}: {e} (retry {attempt + 1}/{NETWORK_RETRIES}, wait {wait:.1f}s)")
+                time.sleep(wait)
+                continue
+            print(f"  WARN NET Error POST {endpoint}: {e}")
+            return {}
+        except Exception as e:
+            print(f"  WARN Unexpected POST {endpoint}: {e}")
+            return {}
+    return {}
 
 
 # ─── Lógica principal ────────────────────────────────────────────────────────

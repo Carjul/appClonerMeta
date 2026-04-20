@@ -279,10 +279,29 @@ export default function useCampaignsController() {
 
   async function runBulk() {
     if (!configId || !bulkCampaignId) return;
+    const confirm = await Swal.fire({
+      title: "Confirmar bulk clone",
+      text: `Se duplicara la campana ${bulkCampaignId}. Este proceso puede tardar varios minutos.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Si, duplicar",
+      cancelButtonText: "Cancelar",
+    });
+    if (!confirm.isConfirmed) return;
+
     setAlert(null);
     const res = await api.runBulk(configId, bulkCampaignId);
     setSelectedJobId(res.jobId);
     setJobLogs([]);
+
+    await Swal.fire({
+      title: "Proceso iniciado",
+      text: "Bulk clone en ejecucion. Revisa el progreso en Jobs.",
+      icon: "success",
+      timer: 1600,
+      showConfirmButton: false,
+    });
+
     await loadJobs();
     await openLogs(res.jobId);
   }
@@ -335,10 +354,29 @@ export default function useCampaignsController() {
 
   async function runSingle() {
     if (!configId || selectedIds.length === 0) return;
+    const confirm = await Swal.fire({
+      title: "Confirmar single clone",
+      text: `Se duplicaran ${selectedIds.length} campanas seleccionadas.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Si, duplicar",
+      cancelButtonText: "Cancelar",
+    });
+    if (!confirm.isConfirmed) return;
+
     setAlert(null);
     const res = await api.runSingle(configId, selectedIds);
     setSelectedJobId(res.jobId);
     setJobLogs([]);
+
+    await Swal.fire({
+      title: "Proceso iniciado",
+      text: "Single clone en ejecucion. Revisa el progreso en Jobs.",
+      icon: "success",
+      timer: 1600,
+      showConfirmButton: false,
+    });
+
     await loadJobs();
     await openLogs(res.jobId);
   }
@@ -463,6 +501,42 @@ export default function useCampaignsController() {
     setAlert({ type: "success", message: "Jobs seleccionados eliminados." });
   }
 
+  async function rerunSelectedJobs() {
+    const ids = Object.keys(selectedJobs).filter((k) => selectedJobs[k]);
+    if (ids.length === 0) {
+      setAlert({ type: "info", message: "No hay jobs seleccionados." });
+      return;
+    }
+
+    const confirm = await Swal.fire({
+      title: "Reejecutar jobs",
+      text: `Se reejecutaran ${ids.length} jobs con la misma configuracion/comando.`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Reejecutar",
+      cancelButtonText: "Cancelar",
+    });
+    if (!confirm.isConfirmed) return;
+
+    let firstNewJobId = null;
+    for (const jobId of ids) {
+      try {
+        const res = await api.rerunJob(jobId);
+        if (!firstNewJobId && res?.jobId) firstNewJobId = res.jobId;
+      } catch (e) {
+        setAlert({ type: "error", message: `No se pudo reejecutar ${jobId.slice(-8)}: ${String(e.message || e)}` });
+      }
+    }
+
+    await loadJobs();
+    if (firstNewJobId) {
+      setSelectedJobId(firstNewJobId);
+      setJobLogs([]);
+      await openLogs(firstNewJobId);
+    }
+    setAlert({ type: "success", message: "Reejecucion enviada." });
+  }
+
   async function copyCampaignId(campaignId) {
     try {
       await navigator.clipboard.writeText(campaignId);
@@ -521,6 +595,7 @@ export default function useCampaignsController() {
     runCampaignStatus,
     runReduceBudgets,
     removeSelectedJobs,
+    rerunSelectedJobs,
     openLogs,
     cancel,
     copyCampaignId,

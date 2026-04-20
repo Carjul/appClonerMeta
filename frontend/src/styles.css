@@ -327,12 +327,26 @@ table {
   min-width: 760px;
 }
 
+.jobs-table th:nth-child(4),
+.jobs-table td:nth-child(4) {
+  max-width: 210px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .jobs-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.jobs-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 th,
@@ -355,13 +369,19 @@ th {
   color: #7ec8ff;
 }
 
-.alert-zone {
-  min-height: 56px;
-  margin-bottom: 8px;
+.toast {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
 }
 
-.alert-placeholder {
-  height: 44px;
+.toast-top {
+  top: 14px;
+}
+
+.toast-center {
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .alert {
@@ -372,6 +392,10 @@ th {
   border-radius: 10px;
   border: 1px solid transparent;
   font-size: 13px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.38);
+  min-width: 280px;
+  max-width: min(92vw, 680px);
+  pointer-events: auto;
 }
 
 .alert-icon {
@@ -383,20 +407,20 @@ th {
 
 .alert-success {
   color: #b8ffd8;
-  background: rgba(31, 191, 117, 0.14);
-  border-color: rgba(31, 191, 117, 0.35);
+  background: rgba(31, 191, 117, 0.32);
+  border-color: rgba(31, 191, 117, 0.62);
 }
 
 .alert-info {
   color: #c7e1ff;
-  background: rgba(47, 116, 255, 0.14);
-  border-color: rgba(47, 116, 255, 0.38);
+  background: rgba(47, 116, 255, 0.30);
+  border-color: rgba(47, 116, 255, 0.62);
 }
 
 .alert-error {
   color: #ffd0d0;
-  background: rgba(227, 77, 77, 0.14);
-  border-color: rgba(227, 77, 77, 0.4);
+  background: rgba(227, 77, 77, 0.30);
+  border-color: rgba(227, 77, 77, 0.62);
 }
 
 .section-head {
@@ -680,6 +704,50 @@ th {
   margin: 0;
 }
 
+.logs-stream {
+  font-family: Consolas, "Courier New", monospace;
+  line-height: 1.35;
+}
+
+.log-line {
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 1px 0;
+}
+
+.log-ts {
+  color: #8aa2c8;
+}
+
+.log-level {
+  color: #b4c7e6;
+  font-weight: 700;
+}
+
+.log-msg {
+  color: #d6e3ff;
+}
+
+.log-ok .log-msg,
+.log-ok .log-level {
+  color: #89efb8;
+}
+
+.log-warn .log-msg,
+.log-warn .log-level {
+  color: #ffd58a;
+}
+
+.log-error .log-msg,
+.log-error .log-level {
+  color: #ff9d9d;
+}
+
+.log-info .log-msg,
+.log-info .log-level {
+  color: #d6e3ff;
+}
+
 @media (max-width: 960px) {
   .topbar {
     flex-direction: column;
@@ -782,6 +850,11 @@ th {
 
   .jobs-head .btn {
     width: 100%;
+  }
+
+  .jobs-head-actions {
+    width: 100%;
+    flex-direction: column;
   }
 
   .inline-actions select,
