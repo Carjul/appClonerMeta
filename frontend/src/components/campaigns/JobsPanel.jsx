@@ -44,7 +44,7 @@ export default function JobsPanel({
         <h3>Jobs</h3>
         {Object.keys(selectedJobs).some((k) => selectedJobs[k]) ? (
           <div className="jobs-head-actions">
-            <button className="btn btn-primary" onClick={onRerunSelectedJobs}>Reejecutar</button>
+            <button className="btn btn-success" onClick={onRerunSelectedJobs}>Ejecutar</button>
             <button className="btn btn-danger" onClick={onRemoveSelectedJobs}>Eliminar</button>
           </div>
         ) : null}
@@ -58,7 +58,7 @@ export default function JobsPanel({
               </th>
               <th>ID</th>
               <th>Tipo</th>
-              <th>Campana/BM</th>
+              <th>Campaña/BM</th>
               <th>Status</th>
               <th>Progreso</th>
               <th>Acciones</th>

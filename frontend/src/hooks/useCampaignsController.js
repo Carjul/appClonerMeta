@@ -509,11 +509,11 @@ export default function useCampaignsController() {
     }
 
     const confirm = await Swal.fire({
-      title: "Reejecutar jobs",
-      text: `Se reejecutaran ${ids.length} jobs con la misma configuracion/comando.`,
+      title: "Ejecutar jobs",
+      text: `Se ejecutaran ${ids.length} jobs con la misma configuracion/comando.`,
       icon: "question",
       showCancelButton: true,
-      confirmButtonText: "Reejecutar",
+      confirmButtonText: "Ejecutar",
       cancelButtonText: "Cancelar",
     });
     if (!confirm.isConfirmed) return;
@@ -524,7 +524,7 @@ export default function useCampaignsController() {
         const res = await api.rerunJob(jobId);
         if (!firstNewJobId && res?.jobId) firstNewJobId = res.jobId;
       } catch (e) {
-        setAlert({ type: "error", message: `No se pudo reejecutar ${jobId.slice(-8)}: ${String(e.message || e)}` });
+        setAlert({ type: "error", message: `No se pudo ejecutar ${jobId.slice(-8)}: ${String(e.message || e)}` });
       }
     }
 
@@ -534,7 +534,7 @@ export default function useCampaignsController() {
       setJobLogs([]);
       await openLogs(firstNewJobId);
     }
-    setAlert({ type: "success", message: "Reejecucion enviada." });
+    setAlert({ type: "success", message: "Ejecucion enviada." });
   }
 
   async function copyCampaignId(campaignId) {
