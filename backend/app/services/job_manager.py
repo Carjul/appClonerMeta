@@ -75,7 +75,7 @@ def _progress_from_line(job_type: str, payload: Dict[str, Any], line: str, count
                 return {"percent": 90, "message": f"Cuentas encontradas: {count}"}
             except Exception:
                 return None
-        if "Total campañas:" in text:
+        if "Total campañas:" in text or "Total campanas:" in text:
             try:
                 count = int(text.split(":", 1)[1].strip())
                 return {"percent": 100, "message": f"Campañas encontradas: {count}"}

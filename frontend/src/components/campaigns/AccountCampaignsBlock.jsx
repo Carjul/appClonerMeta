@@ -1,5 +1,16 @@
 import React from "react";
 
+function money(v) {
+  const n = Number(v || 0);
+  return `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function pct(v) {
+  if (v === null || v === undefined || Number.isNaN(Number(v))) return "-";
+  const n = Number(v);
+  return `${n > 0 ? "+" : ""}${n.toFixed(1)}%`;
+}
+
 export default function AccountCampaignsBlock({
   account,
   expandAllAccounts,
@@ -27,10 +38,17 @@ export default function AccountCampaignsBlock({
             <th>Campaña ID</th>
             <th>Nombre</th>
             <th>Status</th>
+            <th>Dias</th>
+            <th>Spend Hoy</th>
+            <th>Spend LT</th>
+            <th>Purch LT</th>
+            <th>ROI</th>
+            <th>Verdict</th>
           </tr>
         </thead>
         <tbody>
           {(account.campaigns || []).map((c) => {
+            const m = c.metrics || {};
             const checked = !!selectedCampaigns[c.id];
             const disabled = !checked && !!selectedAccountId && selectedAccountId !== account.account_id;
             return (
@@ -51,6 +69,12 @@ export default function AccountCampaignsBlock({
                 </td>
                 <td>{c.name}</td>
                 <td>{c.status}</td>
+                <td>{m.days_live ?? "-"}</td>
+                <td>{money(m.spend_today)}</td>
+                <td>{money(m.spend_lifetime)}</td>
+                <td>{m.purchases_lifetime ?? 0}</td>
+                <td>{pct(m.roi)}</td>
+                <td>{m.verdict || "-"}</td>
               </tr>
             );
           })}
