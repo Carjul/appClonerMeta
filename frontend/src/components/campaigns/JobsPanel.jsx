@@ -54,7 +54,7 @@ export default function JobsPanel({
           <thead>
             <tr>
               <th>
-                <input type="checkbox" checked={allJobsSelected} onChange={(e) => onToggleAllJobs(e.target.checked)} />
+                <input type="checkbox" className="checkbox checkbox-info" checked={allJobsSelected} onChange={(e) => onToggleAllJobs(e.target.checked)} />
               </th>
               <th>ID</th>
               <th>Tipo</th>
@@ -68,7 +68,7 @@ export default function JobsPanel({
             {jobs.map((j) => (
               <tr key={j._id}>
                 <td>
-                  <input type="checkbox" checked={!!selectedJobs[j._id]} onChange={(e) => onToggleJobSelection(j._id, e.target.checked)} />
+                  <input type="checkbox" className="checkbox checkbox-info" checked={!!selectedJobs[j._id]} onChange={(e) => onToggleJobSelection(j._id, e.target.checked)} />
                 </td>
                 <td>{j._id.slice(-8)}</td>
                 <td>{j.type}</td>

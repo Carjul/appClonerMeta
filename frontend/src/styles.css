@@ -558,9 +558,65 @@ th {
 }
 
 .budget-exec input[type="checkbox"] {
-  width: auto;
-  height: 15px;
+  width: 16px;
+  height: 16px;
   margin: 0;
+}
+
+.checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 100%;
+  border: 2px solid #4a678f;
+  background: var(--bg);
+  margin: 0;
+  display: inline-grid;
+  place-content: center;
+  cursor: pointer;
+}
+
+.checkbox::after {
+  content: "";
+  width: 5px;
+  height: 7px;
+  border-right: 2px solid #ffffff;
+  border-bottom: 2px solid #ffffff;
+  transform: rotate(45deg) scale(0);
+  transform-origin: center;
+  transition: transform 0.12s ease-in-out;
+}
+
+.checkbox:checked::after {
+  transform: rotate(45deg) scale(1);
+}
+
+.checkbox:checked {
+  background: #2f74ff;
+  border-color: #5f95ff;
+}
+
+.checkbox:focus-visible {
+  outline: 2px solid rgba(47, 116, 255, 0.55);
+  outline-offset: 2px;
+}
+
+.checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+  border-color: #657e9e;
+  background: #0a1527;
+}
+
+.checkbox:disabled:checked {
+  background: #214f9e;
+  border-color: #537cb7;
+}
+
+.checkbox-info:checked {
+  background: #2f74ff;
+  border-color: #5f95ff;
 }
 
 .budget-run {
@@ -697,6 +753,36 @@ th {
   letter-spacing: 0.3px;
 }
 
+.th-sort-btn {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.th-sort-btn:hover {
+  color: #e7f0ff;
+}
+
+.th-sort-btn.active {
+  color: #8ec0ff;
+}
+
+.th-sort-arrow {
+  font-size: 11px;
+  opacity: 0.9;
+}
+
 .campaign-table th,
 .campaign-table td {
   border-bottom: 1px solid rgba(51, 84, 124, 0.58);
@@ -777,6 +863,15 @@ th {
 
 .row-selectable:hover {
   background: rgba(58, 130, 255, 0.14);
+}
+
+.row-selected {
+  cursor: pointer;
+  background: rgba(58, 130, 255, 0.14);
+}
+
+.row-selected:hover {
+  background: rgba(58, 130, 255, 0.2);
 }
 
 .row-disabled {

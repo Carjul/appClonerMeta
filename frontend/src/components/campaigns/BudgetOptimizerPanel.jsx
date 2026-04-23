@@ -34,7 +34,7 @@ export default function BudgetOptimizerPanel({
         </div>
 
         <label className="budget-exec">
-          <input type="checkbox" checked={reduceExecute} onChange={(e) => onSetReduceExecute(e.target.checked)} />
+          <input type="checkbox" className="checkbox" checked={reduceExecute} onChange={(e) => onSetReduceExecute(e.target.checked)} />
           <span>{reduceExecute ? "EXECUTE" : "DRY RUN"}</span>
         </label>
 
