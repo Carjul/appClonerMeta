@@ -19,11 +19,11 @@ def explorer_command(bm_id: str, token: str) -> Tuple[List[str], Dict[str, str]]
     output_path = _artifact_path("explorer", ".json")
     cmd = [
         PYTHON_BIN,
-        "meta_bm_explorer.py",
-        "--bm-id",
-        bm_id,
+        "fb_daily_report.py",
         "--access-token",
         token,
+        "--bm-id",
+        bm_id,
         "--output-json",
         output_path,
     ]
