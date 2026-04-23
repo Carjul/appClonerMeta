@@ -1,14 +1,11 @@
 import React from "react";
 
 export default function BudgetOptimizerPanel({
-  configs,
-  reduceBm1ConfigId,
-  reduceBm2ConfigId,
+  selectedCount,
+  configName,
   reduceExecute,
   reduceMinSpend,
   reduceTargetBudget,
-  onSetReduceBm1ConfigId,
-  onSetReduceBm2ConfigId,
   onSetReduceExecute,
   onSetReduceMinSpend,
   onSetReduceTargetBudget,
@@ -22,23 +19,8 @@ export default function BudgetOptimizerPanel({
 
       <div className="budget-grid">
         <div className="budget-field">
-          <span className="field-label">Config BM1 (token)</span>
-          <select value={reduceBm1ConfigId} onChange={(e) => onSetReduceBm1ConfigId(e.target.value)}>
-            <option value="">No usar</option>
-            {configs.map((c) => (
-              <option key={c._id} value={c._id}>{c.name}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="budget-field">
-          <span className="field-label">Config BM2 (token)</span>
-          <select value={reduceBm2ConfigId} onChange={(e) => onSetReduceBm2ConfigId(e.target.value)}>
-            <option value="">No usar</option>
-            {configs.map((c) => (
-              <option key={c._id} value={c._id}>{c.name}</option>
-            ))}
-          </select>
+          <span className="field-label">Config actual</span>
+          <input value={configName || "(sin config seleccionada)"} disabled />
         </div>
 
         <div className="budget-field">
@@ -56,7 +38,9 @@ export default function BudgetOptimizerPanel({
           <span>{reduceExecute ? "EXECUTE" : "DRY RUN"}</span>
         </label>
 
-        <button className="btn btn-primary budget-run" onClick={onRunReduceBudgets}>Ejecutar optimizer</button>
+        <button className="btn btn-primary budget-run" onClick={onRunReduceBudgets}>
+          Ejecutar optimizer ({selectedCount})
+        </button>
       </div>
     </section>
   );

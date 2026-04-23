@@ -123,11 +123,36 @@ def get_ad_accounts(bm_id: str) -> list:
 def get_campaigns(account_id: str) -> list:
     url = f"{BASE_URL}/{account_id}/campaigns"
     params = {
-        "fields": "id,name,status,effective_status,objective,created_time",
+        "fields": "id,name,status,effective_status,objective,created_time,daily_budget,lifetime_budget",
         "access_token": ACCESS_TOKEN,
         "limit": 200,
     }
     return paginate(url, params)
+
+
+def get_adset_daily_budget_sum_by_campaign(account_id: str) -> dict:
+    """Fallback for ABO campaigns: sum active adset daily budgets by campaign."""
+    url = f"{BASE_URL}/{account_id}/adsets"
+    params = {
+        "fields": "id,campaign_id,status,daily_budget",
+        "access_token": ACCESS_TOKEN,
+        "limit": 200,
+    }
+    adsets = paginate(url, params)
+    out = {}
+    for ad in adsets:
+        if ad.get("status") != "ACTIVE":
+            continue
+        cid = ad.get("campaign_id")
+        if not cid:
+            continue
+        cents = _safe_float(ad.get("daily_budget"))
+        if cents <= 0:
+            continue
+        out[cid] = out.get(cid, 0.0) + cents
+    for cid in list(out.keys()):
+        out[cid] = round(out[cid] / 100.0, 4)
+    return out
 
 
 def _chunks(items: list, size: int):
@@ -226,6 +251,16 @@ def _safe_float(v):
         return 0.0
 
 
+def _budget_to_usd(v):
+    """Meta budget fields are usually strings in minor units (cents)."""
+    if v is None or v == "":
+        return None
+    raw = _safe_float(v)
+    if raw <= 0:
+        return 0.0
+    return round(raw / 100.0, 4)
+
+
 def get_campaign_insights_map(account_id: str, campaign_ids: list, date_preset: str) -> dict:
     if not campaign_ids:
         return {}
@@ -266,7 +301,12 @@ def get_campaign_insights_map(account_id: str, campaign_ids: list, date_preset: 
     return rows
 
 
-def build_campaign_with_metrics(campaign: dict, today_row: dict, lt_row: dict) -> dict:
+def build_campaign_with_metrics(campaign: dict, today_row: dict, lt_row: dict, adset_budget_sum_by_campaign: dict | None = None) -> dict:
+    campaign_daily_budget = _budget_to_usd(campaign.get("daily_budget"))
+    campaign_lifetime_budget = _budget_to_usd(campaign.get("lifetime_budget"))
+    if campaign_daily_budget is None:
+        campaign_daily_budget = (adset_budget_sum_by_campaign or {}).get(campaign.get("id"))
+
     spend_today = _safe_float((today_row or {}).get("spend", 0))
     co_today = _extract_action((today_row or {}).get("actions"), "offsite_conversion.fb_pixel_InitiateCheckout")
     if co_today == 0:
@@ -313,7 +353,11 @@ def build_campaign_with_metrics(campaign: dict, today_row: dict, lt_row: dict) -
         "effective_status": campaign.get("effective_status"),
         "objective": campaign.get("objective"),
         "created_time": campaign.get("created_time"),
+        "daily_budget": campaign_daily_budget,
+        "lifetime_budget": campaign_lifetime_budget,
         "metrics": {
+            "campaign_daily_budget": campaign_daily_budget,
+            "campaign_lifetime_budget": campaign_lifetime_budget,
             "days_live": int(days_live),
             "spend_today": round(spend_today, 4),
             "purchases_today": int(purchases_today),
@@ -397,6 +441,7 @@ def main():
         campaign_ids = [c.get("id") for c in campaigns if c.get("id")]
         insights_today = {}
         insights_lt = {}
+        adset_budget_sum_by_campaign = {}
 
         if WITH_INSIGHTS and campaign_ids:
             _log(f"  -> {len(campaign_ids)} campanas. Cargando insights (today + lifetime), puede tardar...")
@@ -411,12 +456,19 @@ def main():
                 _log(f"  [WARN] Fallo insights lifetime en {acc_id}: {e}")
                 insights_lt = {}
 
+        if campaign_ids:
+            try:
+                adset_budget_sum_by_campaign = get_adset_daily_budget_sum_by_campaign(acc_id)
+            except RuntimeError as e:
+                _log(f"  [WARN] Fallo budget diario por adsets en {acc_id}: {e}")
+                adset_budget_sum_by_campaign = {}
+
         campaigns_out = []
         for camp in campaigns:
             cid = camp.get("id")
             row_today = insights_today.get(cid, {}) if WITH_INSIGHTS else {}
             row_lt = insights_lt.get(cid, {}) if WITH_INSIGHTS else {}
-            item = build_campaign_with_metrics(camp, row_today, row_lt)
+            item = build_campaign_with_metrics(camp, row_today, row_lt, adset_budget_sum_by_campaign)
             campaigns_out.append(item)
 
         account_out = {

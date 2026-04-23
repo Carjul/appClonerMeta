@@ -21,8 +21,7 @@ export default function CampaignsPage() {
     selectedIds,
     bulkCampaignId,
     targetStatus,
-    reduceBm1ConfigId,
-    reduceBm2ConfigId,
+    activeConfig,
     reduceExecute,
     reduceMinSpend,
     reduceTargetBudget,
@@ -35,8 +34,6 @@ export default function CampaignsPage() {
     setExpandAllAccounts,
     setBulkCampaignId,
     setTargetStatus,
-    setReduceBm1ConfigId,
-    setReduceBm2ConfigId,
     setReduceExecute,
     setReduceMinSpend,
     setReduceTargetBudget,
@@ -101,14 +98,11 @@ export default function CampaignsPage() {
       />
 
       <BudgetOptimizerPanel
-        configs={configs}
-        reduceBm1ConfigId={reduceBm1ConfigId}
-        reduceBm2ConfigId={reduceBm2ConfigId}
+        selectedCount={selectedIds.length}
+        configName={activeConfig?.name || ""}
         reduceExecute={reduceExecute}
         reduceMinSpend={reduceMinSpend}
         reduceTargetBudget={reduceTargetBudget}
-        onSetReduceBm1ConfigId={setReduceBm1ConfigId}
-        onSetReduceBm2ConfigId={setReduceBm2ConfigId}
         onSetReduceExecute={setReduceExecute}
         onSetReduceMinSpend={setReduceMinSpend}
         onSetReduceTargetBudget={setReduceTargetBudget}

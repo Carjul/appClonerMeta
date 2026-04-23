@@ -20,8 +20,6 @@ export default function useCampaignsController() {
   const [alert, setAlert] = useState(null);
   const [deleteWatch, setDeleteWatch] = useState({});
   const [statusWatch, setStatusWatch] = useState({});
-  const [reduceBm1ConfigId, setReduceBm1ConfigId] = useState("");
-  const [reduceBm2ConfigId, setReduceBm2ConfigId] = useState("");
   const [reduceExecute, setReduceExecute] = useState(false);
   const [reduceMinSpend, setReduceMinSpend] = useState("5.0");
   const [reduceTargetBudget, setReduceTargetBudget] = useState("1.00");
@@ -308,10 +306,12 @@ export default function useCampaignsController() {
   }
 
   async function runReduceBudgets() {
-    const bm1 = reduceBm1ConfigId || null;
-    const bm2 = reduceBm2ConfigId || null;
-    if (!bm1 && !bm2) {
-      setAlert({ type: "error", message: "Selecciona al menos una configuracion para token BM1 o BM2." });
+    if (!configId) {
+      setAlert({ type: "error", message: "Selecciona una configuracion primero." });
+      return;
+    }
+    if (selectedIds.length === 0) {
+      setAlert({ type: "error", message: "Selecciona una o varias campanas para optimizer." });
       return;
     }
 
@@ -335,8 +335,8 @@ export default function useCampaignsController() {
     if (!confirm.isConfirmed) return;
 
     const res = await api.runReduceBudgets({
-      tokenConfigIdBm1: bm1,
-      tokenConfigIdBm2: bm2,
+      configId,
+      campaignIds: selectedIds,
       execute: reduceExecute,
       minSpend,
       targetBudget,
@@ -349,7 +349,9 @@ export default function useCampaignsController() {
 
     setAlert({
       type: "success",
-      message: reduceExecute ? "Optimizer en ejecucion (EXECUTE)." : "Optimizer en ejecucion (DRY RUN).",
+      message: reduceExecute
+        ? `Optimizer en ejecucion (EXECUTE) para ${selectedIds.length} campanas.`
+        : `Optimizer en ejecucion (DRY RUN) para ${selectedIds.length} campanas.`,
     });
   }
 
@@ -551,6 +553,8 @@ export default function useCampaignsController() {
   const filteredAccounts = useMemo(() => (accountFilter === "all" ? accounts : accounts.filter((acc) => acc.account_id === accountFilter)), [accounts, accountFilter]);
   const allJobsSelected = useMemo(() => jobs.length > 0 && jobs.every((j) => !!selectedJobs[j._id]), [jobs, selectedJobs]);
 
+  const activeConfig = useMemo(() => configs.find((c) => c._id === configId) || null, [configs, configId]);
+
   return {
     alert,
     configs,
@@ -564,8 +568,7 @@ export default function useCampaignsController() {
     selectedIds,
     bulkCampaignId,
     targetStatus,
-    reduceBm1ConfigId,
-    reduceBm2ConfigId,
+    activeConfig,
     reduceExecute,
     reduceMinSpend,
     reduceTargetBudget,
@@ -579,8 +582,6 @@ export default function useCampaignsController() {
     setExpandAllAccounts,
     setBulkCampaignId,
     setTargetStatus,
-    setReduceBm1ConfigId,
-    setReduceBm2ConfigId,
     setReduceExecute,
     setReduceMinSpend,
     setReduceTargetBudget,

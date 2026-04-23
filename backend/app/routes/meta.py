@@ -127,18 +127,13 @@ def run_campaigns_status(payload: CampaignStatusRequest):
 
 @router.post("/budgets/reduce")
 def run_reduce_budgets(payload: ReduceBudgetsRequest):
-    token_bm1 = None
-    token_bm2 = None
+    if not payload.campaignIds:
+        raise HTTPException(status_code=400, detail="campaignIds is required")
 
-    if payload.tokenConfigIdBm1:
-        cfg1 = _get_config(payload.tokenConfigIdBm1)
-        token_bm1 = cfg1.get("access_token")
-    if payload.tokenConfigIdBm2:
-        cfg2 = _get_config(payload.tokenConfigIdBm2)
-        token_bm2 = cfg2.get("access_token")
-
-    if not token_bm1 and not token_bm2:
-        raise HTTPException(status_code=400, detail="At least one token config is required")
+    cfg = _get_config(payload.configId)
+    token = cfg.get("access_token")
+    if not token:
+        raise HTTPException(status_code=400, detail="Config token not found")
 
     min_spend = payload.minSpend if payload.minSpend is not None else 5.0
     target_budget = payload.targetBudget if payload.targetBudget is not None else 1.0
@@ -146,20 +141,18 @@ def run_reduce_budgets(payload: ReduceBudgetsRequest):
         raise HTTPException(status_code=400, detail="Invalid minSpend/targetBudget values")
 
     cmd, artifacts = reduce_budgets_command(
-        token_bm1=token_bm1,
-        token_bm2=token_bm2,
+        token=token,
+        campaign_ids=payload.campaignIds,
         execute=payload.execute,
         min_spend=min_spend,
         target_budget=target_budget,
     )
 
-    config_ref = payload.tokenConfigIdBm1 or payload.tokenConfigIdBm2 or "multi"
     return create_job(
         job_type="reduce_budgets",
-        config_id=config_ref,
+        config_id=payload.configId,
         payload={
-            "tokenConfigIdBm1": payload.tokenConfigIdBm1,
-            "tokenConfigIdBm2": payload.tokenConfigIdBm2,
+            "campaignIds": payload.campaignIds,
             "execute": payload.execute,
             "minSpend": min_spend,
             "targetBudget": target_budget,

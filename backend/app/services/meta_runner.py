@@ -78,18 +78,24 @@ def campaign_status_command(campaign_ids: List[str], token: str, status: str, ap
 
 
 def reduce_budgets_command(
-    token_bm1: str | None,
-    token_bm2: str | None,
+    token: str,
+    campaign_ids: List[str],
     execute: bool = False,
     min_spend: float = 5.0,
     target_budget: float = 1.0,
 ) -> Tuple[List[str], Dict[str, str]]:
-    cmd = [PYTHON_BIN, "reduce_budgets.py"]
-    if token_bm1:
-        cmd.extend(["--token-bm1", token_bm1])
-    if token_bm2:
-        cmd.extend(["--token-bm2", token_bm2])
-    cmd.extend(["--min-spend", str(min_spend), "--target-budget", str(target_budget)])
+    cmd = [
+        PYTHON_BIN,
+        "reduce_budgets.py",
+        "--access-token",
+        token,
+        "--campaign-ids",
+        *campaign_ids,
+        "--min-spend",
+        str(min_spend),
+        "--target-budget",
+        str(target_budget),
+    ]
     if execute:
         cmd.append("--execute")
     return cmd, {}

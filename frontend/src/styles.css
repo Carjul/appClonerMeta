@@ -319,6 +319,45 @@ table {
   overflow-x: auto;
 }
 
+.jobs-table-wrap,
+.config-table-wrap,
+.logs-box,
+.logs-box pre {
+  scrollbar-color: #3a5d8a #0d1c31;
+}
+
+.jobs-table-wrap::-webkit-scrollbar,
+.config-table-wrap::-webkit-scrollbar,
+.logs-box::-webkit-scrollbar,
+.logs-box pre::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.jobs-table-wrap::-webkit-scrollbar-track,
+.config-table-wrap::-webkit-scrollbar-track,
+.logs-box::-webkit-scrollbar-track,
+.logs-box pre::-webkit-scrollbar-track {
+  background: #0d1c31;
+  border-radius: 999px;
+}
+
+.jobs-table-wrap::-webkit-scrollbar-thumb,
+.config-table-wrap::-webkit-scrollbar-thumb,
+.logs-box::-webkit-scrollbar-thumb,
+.logs-box pre::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #3f6ea8, #2f547f);
+  border-radius: 999px;
+  border: 1px solid #1c3553;
+}
+
+.jobs-table-wrap::-webkit-scrollbar-thumb:hover,
+.config-table-wrap::-webkit-scrollbar-thumb:hover,
+.logs-box::-webkit-scrollbar-thumb:hover,
+.logs-box pre::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #4e80bd, #3c679c);
+}
+
 .config-table {
   min-width: 620px;
 }
@@ -503,19 +542,33 @@ th {
   gap: 6px;
 }
 
+.field-help {
+  font-size: 11px;
+  color: #9fb6d8;
+}
+
 .budget-exec {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 12px;
+  padding: 5px 8px;
   border-radius: 10px;
-  border: 1px solid #2c4c74;
-  background: rgba(17, 37, 60, 0.7);
-  min-height: 38px;
+  min-height: 30px;
+  width: fit-content;
+}
+
+.budget-exec input[type="checkbox"] {
+  width: auto;
+  height: 15px;
+  margin: 0;
 }
 
 .budget-run {
-  min-height: 38px;
+  margin-top: 20px;
+  height: 60%;
+  padding: 5px 10px;
+  width: auto;
+  justify-self: start;
 }
 
 .switch-wrap {
@@ -603,7 +656,37 @@ th {
 
 .account-block table {
   margin-top: 0;
-  table-layout: fixed;
+  table-layout: auto;
+}
+
+.campaign-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-color: #3a5d8a #0d1c31;
+}
+
+.campaign-table-wrap::-webkit-scrollbar {
+  height: 10px;
+}
+
+.campaign-table-wrap::-webkit-scrollbar-track {
+  background: #0d1c31;
+  border-radius: 999px;
+}
+
+.campaign-table-wrap::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #3f6ea8, #2f547f);
+  border-radius: 999px;
+  border: 1px solid #1c3553;
+}
+
+.campaign-table-wrap::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #4e80bd, #3c679c);
+}
+
+.campaign-table {
+  min-width: 2350px;
 }
 
 .campaign-table thead th {
@@ -625,9 +708,11 @@ th {
 
 .account-block th,
 .account-block td {
-  padding: 4px 6px;
+  padding: 9px 12px;
   font-size: 13px;
   line-height: 1.2;
+  white-space: nowrap;
+  vertical-align: middle;
 }
 
 .account-block th:first-child,
@@ -636,21 +721,36 @@ th {
 }
 
 .account-block td:nth-child(2) {
-  width: 155px;
+  width: 165px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .account-block td:nth-child(3) {
-  max-width: 180px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  min-width: 360px;
+  max-width: 480px;
+  white-space: normal;
+}
+
+.campaign-name-cell {
+  font-weight: 600;
+  letter-spacing: 0.1px;
+  padding-right: 18px;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
 }
 
 .account-block td:nth-child(4) {
-  width: 90px;
+  min-width: 110px;
+}
+
+.account-block td:nth-child(5) {
+  min-width: 90px;
+}
+
+.account-block td:nth-child(4),
+.account-block td:nth-child(5) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -681,6 +781,78 @@ th {
 
 .row-disabled {
   opacity: 0.68;
+}
+
+.verdict-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.verdict-winner {
+  color: #a5f8ca;
+  background: rgba(25, 151, 89, 0.28);
+  border-color: rgba(84, 225, 156, 0.5);
+}
+
+.verdict-potential {
+  color: #c7f8e1;
+  background: rgba(20, 121, 96, 0.3);
+  border-color: rgba(83, 210, 167, 0.45);
+}
+
+.verdict-watch {
+  color: #ffe3a8;
+  background: rgba(170, 117, 15, 0.3);
+  border-color: rgba(251, 198, 86, 0.45);
+}
+
+.verdict-monitor {
+  color: #cde3ff;
+  background: rgba(41, 95, 172, 0.28);
+  border-color: rgba(115, 171, 255, 0.4);
+}
+
+.verdict-review {
+  color: #d7ccff;
+  background: rgba(87, 72, 160, 0.3);
+  border-color: rgba(151, 132, 255, 0.45);
+}
+
+.verdict-new {
+  color: #9fe8ff;
+  background: rgba(18, 110, 150, 0.32);
+  border-color: rgba(92, 199, 243, 0.45);
+}
+
+.verdict-insufficient {
+  color: #ffd6e8;
+  background: rgba(140, 79, 114, 0.3);
+  border-color: rgba(230, 145, 193, 0.45);
+}
+
+.verdict-high-cpc {
+  color: #ffd0a8;
+  background: rgba(162, 84, 26, 0.3);
+  border-color: rgba(240, 145, 73, 0.45);
+}
+
+.verdict-kill {
+  color: #ffb3b3;
+  background: rgba(175, 41, 41, 0.3);
+  border-color: rgba(255, 125, 125, 0.5);
+}
+
+.verdict-default {
+  color: #dbe8ff;
+  background: rgba(67, 87, 121, 0.3);
+  border-color: rgba(130, 156, 199, 0.45);
 }
 
 .logs-box {
@@ -902,8 +1074,8 @@ th {
   }
 
   .account-block table {
-    min-width: 620px;
-    width: 620px;
+    min-width: 2350px;
+    width: 2350px;
   }
 
   .logs-box {

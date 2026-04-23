@@ -42,8 +42,8 @@ class CampaignStatusRequest(BaseModel):
 
 
 class ReduceBudgetsRequest(BaseModel):
-    tokenConfigIdBm1: Optional[str] = None
-    tokenConfigIdBm2: Optional[str] = None
+    configId: str
+    campaignIds: List[str]
     execute: bool = False
     minSpend: Optional[float] = 5.0
     targetBudget: Optional[float] = 1.0

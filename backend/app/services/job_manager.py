@@ -405,18 +405,16 @@ def _rebuild_job_command(job_doc: Dict[str, Any]) -> tuple[List[str], Dict[str, 
         return campaign_status_command(campaign_ids, token, status=status, api_version=api_version)
 
     if job_type == "reduce_budgets":
-        bm1_id = payload.get("tokenConfigIdBm1")
-        bm2_id = payload.get("tokenConfigIdBm2")
-        token_bm1 = _get_config_token(bm1_id) if bm1_id else None
-        token_bm2 = _get_config_token(bm2_id) if bm2_id else None
+        token = _get_config_token(config_id)
+        campaign_ids = payload.get("campaignIds", [])
         execute = bool(payload.get("execute", False))
         min_spend = float(payload.get("minSpend", 5.0) or 5.0)
         target_budget = float(payload.get("targetBudget", 1.0) or 1.0)
-        if not token_bm1 and not token_bm2:
-            raise RuntimeError("Missing tokens for reduce_budgets rerun")
+        if not token or not campaign_ids:
+            raise RuntimeError("Missing token/campaignIds for reduce_budgets rerun")
         return reduce_budgets_command(
-            token_bm1=token_bm1,
-            token_bm2=token_bm2,
+            token=token,
+            campaign_ids=campaign_ids,
             execute=execute,
             min_spend=min_spend,
             target_budget=target_budget,
