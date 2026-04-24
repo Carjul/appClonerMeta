@@ -6,9 +6,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.config import (
+    SCHEDULER_ENABLED,
+    SCHEDULER_HOUR,
+    SCHEDULER_MAX_CONFIGS,
+    SCHEDULER_MINUTE,
+    SCHEDULER_TZ,
+)
 from app.routes.configs import router as configs_router
 from app.routes.jobs import router as jobs_router
 from app.routes.meta import router as meta_router
+from app.services.scheduler import start_scheduler, stop_scheduler
 
 app = FastAPI(title="Meta Automation API", version="1.0.0")
 
@@ -21,9 +29,28 @@ app.add_middleware(
 )
 
 
+@app.on_event("startup")
+def _startup_scheduler() -> None:
+    start_scheduler()
+
+
+@app.on_event("shutdown")
+def _shutdown_scheduler() -> None:
+    stop_scheduler()
+
+
 @app.get("/api/health")
 def health():
-    return {"ok": True}
+    return {
+        "ok": True,
+        "scheduler": {
+            "enabled": SCHEDULER_ENABLED,
+            "timezone": SCHEDULER_TZ,
+            "dailyHour": SCHEDULER_HOUR,
+            "dailyMinute": SCHEDULER_MINUTE,
+            "maxConfigs": SCHEDULER_MAX_CONFIGS,
+        },
+    }
 
 
 app.include_router(configs_router)
