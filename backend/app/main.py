@@ -1,5 +1,8 @@
 from pathlib import Path
+import threading
+import time
 
+import requests
 from fastapi import FastAPI
 from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,7 +21,36 @@ from app.routes.jobs import router as jobs_router
 from app.routes.meta import router as meta_router
 from app.services.scheduler import start_scheduler, stop_scheduler
 
-app = FastAPI(title="Meta Automation API", version="1.0.0")
+_HEALTH_PING_URL = "https://appclonermeta.onrender.com/api/health"
+_HEALTH_PING_INTERVAL_SECONDS = 240
+_health_ping_stop = threading.Event()
+_health_ping_thread = None
+
+
+def _health_ping_loop() -> None:
+    while not _health_ping_stop.is_set():
+        try:
+            res = requests.get(_HEALTH_PING_URL, timeout=20)
+            res.raise_for_status()
+            print(f"[health-ping] {res.json()}", flush=True)
+        except Exception as exc:
+            print(f"[health-ping] ERROR: {exc}", flush=True)
+        _health_ping_stop.wait(_HEALTH_PING_INTERVAL_SECONDS)
+
+
+def _start_health_ping() -> None:
+    global _health_ping_thread
+    if _health_ping_thread and _health_ping_thread.is_alive():
+        return
+    _health_ping_stop.clear()
+    _health_ping_thread = threading.Thread(target=_health_ping_loop, daemon=True, name="health-ping-loop")
+    _health_ping_thread.start()
+
+
+def _stop_health_ping() -> None:
+    _health_ping_stop.set()
+
+app = FastAPI(title="Meta API Tool", version="1.2.3")
 
 app.add_middleware(
     CORSMiddleware,
@@ -32,11 +64,13 @@ app.add_middleware(
 @app.on_event("startup")
 def _startup_scheduler() -> None:
     start_scheduler()
+    _start_health_ping()
 
 
 @app.on_event("shutdown")
 def _shutdown_scheduler() -> None:
     stop_scheduler()
+    _stop_health_ping()
 
 
 @app.get("/api/health")

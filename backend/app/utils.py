@@ -1,9 +1,10 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from bson import ObjectId
 
 
 def now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    tz = timezone(timedelta(hours=-5), name="America/Bogota")
+    return datetime.now(tz).isoformat()
 
 
 def oid(value: str) -> ObjectId:
