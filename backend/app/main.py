@@ -15,14 +15,15 @@ from app.config import (
     SCHEDULER_MAX_CONFIGS,
     SCHEDULER_MINUTE,
     SCHEDULER_TZ,
+    APP_URL,
 )
 from app.routes.configs import router as configs_router
 from app.routes.jobs import router as jobs_router
 from app.routes.meta import router as meta_router
 from app.services.scheduler import start_scheduler, stop_scheduler
 
-_HEALTH_PING_URL = "https://appclonermeta.onrender.com/api/health"
-_HEALTH_PING_INTERVAL_SECONDS = 240
+_HEALTH_PING_URL = f"{APP_URL}/api/health"
+_HEALTH_PING_INTERVAL_SECONDS = 600
 _health_ping_stop = threading.Event()
 _health_ping_thread = None
 

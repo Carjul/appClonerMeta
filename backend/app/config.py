@@ -9,6 +9,7 @@ load_dotenv(dotenv_path=ENV_PATH)
 MONGO_URI = os.getenv("MONGO_URI") or os.getenv("MONGODB_URI") or "mongodb://localhost:27017"
 DB_NAME = os.getenv("DB_NAME", "meta_automation")
 PYTHON_BIN = os.getenv("PYTHON_BIN", "python")
+APP_URL = os.getenv("VITE_API_BASE")
 APP_HOST = os.getenv("APP_HOST", "0.0.0.0")
 APP_PORT = int(os.getenv("PORT") or os.getenv("APP_PORT", "8000"))
 
