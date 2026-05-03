@@ -12,15 +12,23 @@ from fastapi.staticfiles import StaticFiles
 from app.config import (
     SCHEDULER_ENABLED,
     SCHEDULER_HOUR,
+    SCHEDULER_INTRADAY_ENABLED,
+    SCHEDULER_INTRADAY_INTERVAL_MINUTES,
+    SCHEDULER_INTRADAY_START_HOUR,
+    SCHEDULER_INTRADAY_STOP_HOUR,
     SCHEDULER_MAX_CONFIGS,
     SCHEDULER_MINUTE,
+    SCHEDULER_RUN_DAILY_REPORT,
+    SCHEDULER_RUN_EXPLORER,
     SCHEDULER_TZ,
     APP_URL,
 )
 from app.routes.configs import router as configs_router
+from app.routes.daily_report import router as daily_report_router
 from app.routes.jobs import router as jobs_router
 from app.routes.meta import router as meta_router
-from app.services.scheduler import start_scheduler, stop_scheduler
+from app.routes.rules_engine import router as rules_engine_router
+from app.services.scheduler import scheduler_state, start_scheduler, stop_scheduler
 
 _HEALTH_PING_URL = f"{APP_URL}/api/health"
 _HEALTH_PING_INTERVAL_SECONDS = 600
@@ -84,13 +92,24 @@ def health():
             "dailyHour": SCHEDULER_HOUR,
             "dailyMinute": SCHEDULER_MINUTE,
             "maxConfigs": SCHEDULER_MAX_CONFIGS,
+            "runExplorer": SCHEDULER_RUN_EXPLORER,
+            "runDailyReport": SCHEDULER_RUN_DAILY_REPORT,
+            "intraday": {
+                "enabled": SCHEDULER_INTRADAY_ENABLED,
+                "startHour": SCHEDULER_INTRADAY_START_HOUR,
+                "stopHour": SCHEDULER_INTRADAY_STOP_HOUR,
+                "intervalMinutes": SCHEDULER_INTRADAY_INTERVAL_MINUTES,
+            },
+            "state": scheduler_state(),
         },
     }
 
 
 app.include_router(configs_router)
+app.include_router(daily_report_router)
 app.include_router(jobs_router)
 app.include_router(meta_router)
+app.include_router(rules_engine_router)
 
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"

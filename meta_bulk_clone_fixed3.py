@@ -153,116 +153,6 @@ def _is_transient(err):
         if not blame or blame == "{}": return True
     return False
 
-
-# Patrones de mensaje que indican que la pagina no tiene IG conectado
-_IG_NO_ACCESS_PATTERNS = (
-    "no tiene acceso a instagram",
-    "not connected to instagram",
-    "no instagram account",
-    "no tiene una cuenta de instagram",
-    "página no tiene cuenta de instagram",
-    "no tiene cuenta de instagram conectada",
-    "instagram identity",
-    "instagram account is not connected",
-)
-_IG_NO_ACCESS_SUBCODES = (1487390, 1487079, 1815174)
-
-
-# PBIA (Page-Backed Instagram Account) — cache para no llamar a la API mas de una vez por pagina
-_PAGE_ID = None              # se setea desde fetch_initial_config
-_PBIA_CACHE = {}             # page_id -> pbia_id (o None si fallo)
-_PBIA_LOCK = threading.Lock()
-
-
-def _ensure_pbia():
-    """Crea (o recupera) la PBIA para _PAGE_ID. Idempotente y cacheada por page_id.
-    Retorna el pbia_id si existe/se creo, None si fallo o no hay page_id.
-    """
-    if not _PAGE_ID:
-        logger.error("PBIA: no hay page_id disponible (object_story_spec.page_id no se detecto)")
-        return None
-
-    with _PBIA_LOCK:
-        if _PAGE_ID in _PBIA_CACHE:
-            return _PBIA_CACHE[_PAGE_ID]
-
-        url = f"{BASE_URL}/{_PAGE_ID}/page_backed_instagram_accounts"
-        logger.warning("PBIA: creando/obteniendo para page_id=%s", _PAGE_ID)
-        try:
-            r = requests.post(url, data={"access_token": ACCESS_TOKEN}, timeout=30)
-            _log_http_response(f"PBIA_CREATE({_PAGE_ID})", r)
-            data = r.json()
-        except Exception as e:
-            logger.error("PBIA: excepcion al llamar al endpoint: %s", e)
-            _PBIA_CACHE[_PAGE_ID] = None
-            return None
-
-        if "error" in data:
-            _log_api_error(f"PBIA_CREATE({_PAGE_ID})", data["error"])
-            _PBIA_CACHE[_PAGE_ID] = None
-            return None
-
-        pbia_id = data.get("id")
-        _PBIA_CACHE[_PAGE_ID] = pbia_id
-        logger.warning("PBIA: OK pbia_id=%s para page_id=%s", pbia_id, _PAGE_ID)
-        return pbia_id
-
-
-def _autofix_payload(payload, err):
-    """Ajusta el payload in-place ante errores conocidos de Meta. Devuelve True si modifico algo."""
-    if not isinstance(payload, dict):
-        return False
-
-    subcode = err.get("error_subcode")
-    msg = (err.get("message") or "").lower()
-    user_msg = (err.get("error_user_msg") or "").lower()
-    user_title = (err.get("error_user_title") or "").lower()
-    error_data = str(err.get("error_data") or "")
-    full_text = f"{msg} {user_msg} {user_title}"
-
-    targeting = payload.get("targeting")
-    if not isinstance(targeting, dict):
-        return False
-
-    ig_positions = targeting.get("instagram_positions")
-    ig_positions = ig_positions if isinstance(ig_positions, list) else None
-
-    # FIX 1: explore_home requiere explore (subcode 2490392)
-    if subcode == 2490392 or ("instagram_positions" in error_data and ("explore" in full_text or "explorar" in full_text)):
-        if ig_positions is not None:
-            if "explore_home" in ig_positions and "explore" not in ig_positions:
-                ig_positions.append("explore")
-                logger.warning("AUTOFIX: anadido 'explore' a instagram_positions (subcode 2490392)")
-                return True
-            if "explore" in ig_positions and "explore_home" not in ig_positions:
-                ig_positions.append("explore_home")
-                logger.warning("AUTOFIX: anadido 'explore_home' a instagram_positions")
-                return True
-            if "explore_home" in ig_positions:
-                ig_positions.remove("explore_home")
-                logger.warning("AUTOFIX: removido 'explore_home' (no pudo emparejarse)")
-                return True
-
-    # FIX 2: pagina sin Instagram conectado -> crear PBIA on-demand y reintentar
-    # NO se remueve Instagram. En su lugar se crea una Page-Backed Instagram Account
-    # (PBIA) para que la fan page pueda publicar en IG sin tener cuenta IG real.
-    # La llamada es idempotente y se cachea por page_id, asi se ejecuta solo cuando
-    # Meta arroja el error (no preventivamente).
-    if subcode in _IG_NO_ACCESS_SUBCODES or any(p in full_text for p in _IG_NO_ACCESS_PATTERNS):
-        pbia_id = _ensure_pbia()
-        if pbia_id:
-            logger.warning("AUTOFIX: PBIA lista (id=%s). Reintentando con misma config.", pbia_id)
-            return True
-        logger.error(
-            "AUTOFIX FAIL: no se pudo crear/obtener PBIA. "
-            "Verifica permisos del token (pages_manage_ads, ads_management) "
-            "y que la fan page sea elegible para PBIA en Business Manager."
-        )
-        return False
-
-    return False
-
-
 def api_batch(sub_requests):
     attempt = 0
     urls_summary = [sr.get("relative_url", "?")[:80] for sr in sub_requests]
@@ -301,15 +191,12 @@ def api_batch(sub_requests):
 
 def api_post(endpoint, payload):
     url = f"{BASE_URL}/{endpoint}"
-    rl_attempt = tr_attempt = autofix_attempts = 0
-    MAX_AUTOFIX = 3
-    # Trabajar con copia para que el autofix no mute el payload del caller
-    payload = copy.deepcopy(payload)
+    pl  = {**payload, "access_token": ACCESS_TOKEN}
+    rl_attempt = tr_attempt = 0
     # Log del payload sin access_token
     logger.info("POST %s | payload_keys=%s", endpoint, list(payload.keys()))
     logger.debug("POST %s | payload=%s", endpoint, json.dumps(payload, ensure_ascii=False, default=str)[:600])
     while True:
-        pl = {**payload, "access_token": ACCESS_TOKEN}
         try:
             r = requests.post(url, json=pl, timeout=30)
             _log_http_response(f"POST({endpoint})", r)
@@ -331,10 +218,6 @@ def api_post(endpoint, payload):
             tr_attempt += 1
             logger.warning("POST %s | transient error, retry %d/%d", endpoint, tr_attempt, TRANSIENT_RETRIES)
             time.sleep(TRANSIENT_SLEEP); continue
-        if autofix_attempts < MAX_AUTOFIX and _autofix_payload(payload, err):
-            autofix_attempts += 1
-            logger.warning("POST %s | autofix aplicado, retry %d/%d", endpoint, autofix_attempts, MAX_AUTOFIX)
-            time.sleep(SLEEP_BETWEEN); continue
         logger.error("POST %s | FATAL error, no more retries", endpoint)
         return None, err
 
@@ -448,16 +331,6 @@ def fetch_initial_config():
     adset_data = results[1]["body"]
     ad_data    = results[2]["body"]
     cr_spec    = clean_creative_spec(results[3]["body"])
-
-    # Detectar page_id para autofix de PBIA (solo se usa si Meta lanza el error de "no IG")
-    global _PAGE_ID
-    osp = cr_spec.get("object_story_spec") or {}
-    detected_page_id = osp.get("page_id")
-    if detected_page_id:
-        _PAGE_ID = detected_page_id
-        logger.info("PAGE_ID detectado para PBIA on-demand: %s", _PAGE_ID)
-    else:
-        logger.warning("PAGE_ID no detectado en object_story_spec (PBIA no estara disponible si Meta lanza error de no-IG)")
 
     # Capturar estado y programación original de la campaña
     orig_camp_status = camp_data.get("status", "ACTIVE")

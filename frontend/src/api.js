@@ -41,6 +41,22 @@ export const api = {
   updateCampaignsStatus: (configId, campaignIds, status, apiVersion = "v21.0") => req("/api/campaigns/status", { method: "POST", body: JSON.stringify({ configId, campaignIds, status, apiVersion }) }),
   runReduceBudgets: (payload) => req("/api/budgets/reduce", { method: "POST", body: JSON.stringify(payload) }),
 
+  runDailyReport: (configId, periods) => req("/api/daily-report/run", { method: "POST", body: JSON.stringify({ configId, periods }) }),
+  getDailyReportLatest: (configId) => req(`/api/daily-report/latest/${configId}`),
+  getDailyReportHistory: (configId, limit = 20) => req(`/api/daily-report/history/${configId}?limit=${limit}`),
+
+  listRulesPresets: () => req("/api/rules/presets"),
+  listRulesAccounts: (configId) => req(`/api/rules/config/${configId}/accounts`),
+  listRulesCampaigns: (configId, accountId) => req(`/api/rules/config/${configId}/accounts/${accountId}/campaigns`),
+  listRules: (configId) => req(`/api/rules/config/${configId}`),
+  createRule: (configId, payload) => req(`/api/rules/config/${configId}`, { method: "POST", body: JSON.stringify(payload) }),
+  toggleRule: (ruleId, enabled) => req(`/api/rules/${ruleId}/toggle`, { method: "POST", body: JSON.stringify({ enabled }) }),
+  deleteRule: (ruleId) => req(`/api/rules/${ruleId}`, { method: "DELETE" }),
+  bulkToggleRules: (configId, ruleIds, action) => req(`/api/rules/config/${configId}/bulk/toggle`, { method: "POST", body: JSON.stringify({ ruleIds, action }) }),
+  bulkDeleteRules: (configId, ruleIds) => req(`/api/rules/config/${configId}/bulk/delete`, { method: "POST", body: JSON.stringify({ ruleIds }) }),
+  listRulesLogs: (configId, limit = 80) => req(`/api/rules/config/${configId}/logs?limit=${limit}`),
+  clearRulesLogs: (configId) => req(`/api/rules/config/${configId}/logs/clear`, { method: "POST" }),
+
   listJobs: () => req("/api/jobs"),
   getJob: (jobId) => req(`/api/jobs/${jobId}`),
   getJobLogs: (jobId, limit = 5000) => req(`/api/jobs/${jobId}/logs?limit=${limit}`),

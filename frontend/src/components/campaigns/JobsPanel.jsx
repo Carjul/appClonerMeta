@@ -17,6 +17,8 @@ function jobTarget(job) {
     return `${payload.campaignIds[0]} (+${payload.campaignIds.length - 1})`;
   }
   if (payload.bmId) return `BM ${payload.bmId}`;
+  if (payload.configId) return `CFG:${String(payload.configId).slice(-6)}`;
+  if (payload.tokenConfigId) return `CFG:${String(payload.tokenConfigId).slice(-6)}`;
   if (payload.tokenConfigIdBm1 || payload.tokenConfigIdBm2) {
     const bm1 = payload.tokenConfigIdBm1 ? `BM1:${String(payload.tokenConfigIdBm1).slice(-6)}` : null;
     const bm2 = payload.tokenConfigIdBm2 ? `BM2:${String(payload.tokenConfigIdBm2).slice(-6)}` : null;

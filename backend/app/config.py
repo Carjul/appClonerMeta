@@ -22,9 +22,15 @@ def _as_bool(value: str | None, default: bool = False) -> bool:
 
 SCHEDULER_ENABLED = _as_bool(os.getenv("SCHEDULER_ENABLED"), True)
 SCHEDULER_TZ = os.getenv("SCHEDULER_TZ", "America/Bogota")
-SCHEDULER_HOUR = int(os.getenv("SCHEDULER_HOUR", "7"))
-SCHEDULER_MINUTE = int(os.getenv("SCHEDULER_MINUTE", "30"))
+SCHEDULER_HOUR = int(os.getenv("SCHEDULER_HOUR", "6"))
+SCHEDULER_MINUTE = int(os.getenv("SCHEDULER_MINUTE", "0"))
 SCHEDULER_POLL_SECONDS = int(os.getenv("SCHEDULER_POLL_SECONDS", "30"))
 SCHEDULER_MAX_CONFIGS = int(os.getenv("SCHEDULER_MAX_CONFIGS", "2"))
 SCHEDULER_CONFIG_IDS = [v.strip() for v in os.getenv("SCHEDULER_CONFIG_IDS", "").split(",") if v.strip()]
 SCHEDULER_CONFIG_NAMES = [v.strip() for v in os.getenv("SCHEDULER_CONFIG_NAMES", "").split(",") if v.strip()]
+SCHEDULER_RUN_EXPLORER = _as_bool(os.getenv("SCHEDULER_RUN_EXPLORER"), True)
+SCHEDULER_RUN_DAILY_REPORT = _as_bool(os.getenv("SCHEDULER_RUN_DAILY_REPORT"), True)
+SCHEDULER_INTRADAY_ENABLED = _as_bool(os.getenv("SCHEDULER_INTRADAY_ENABLED"), True)
+SCHEDULER_INTRADAY_START_HOUR = int(os.getenv("SCHEDULER_INTRADAY_START_HOUR", "9"))
+SCHEDULER_INTRADAY_STOP_HOUR = int(os.getenv("SCHEDULER_INTRADAY_STOP_HOUR", "20"))
+SCHEDULER_INTRADAY_INTERVAL_MINUTES = int(os.getenv("SCHEDULER_INTRADAY_INTERVAL_MINUTES", "120"))

@@ -28,6 +28,34 @@ logging.basicConfig(level=logging.DEBUG, format=LOG_FORMAT, stream=sys.stdout)
 logger = logging.getLogger("meta_clone")
 
 
+# ── RATE LIMIT MANAGER (Token Bucket) ──────────────────────────────────────
+class RateLimitManager:
+    """Gestor de rate limit para Meta API (token bucket)"""
+    def __init__(self, calls_per_minute=200):
+        self.calls_per_minute = calls_per_minute
+        self.tokens = calls_per_minute
+        self.last_refill = time.time()
+        self.lock = threading.Lock()
+        self.min_interval = 60.0 / calls_per_minute
+
+    def acquire(self, tokens=1):
+        """Esperar hasta tener tokens disponibles"""
+        while True:
+            with self.lock:
+                now = time.time()
+                elapsed = now - self.last_refill
+                refilled = (elapsed / 60.0) * self.calls_per_minute
+                self.tokens = min(self.calls_per_minute, self.tokens + refilled)
+                self.last_refill = now
+                if self.tokens >= tokens:
+                    self.tokens -= tokens
+                    return
+            time.sleep(self.min_interval)
+
+# Inicializar rate limiter (conservador: 150/min)
+RATE_LIMITER = RateLimitManager(calls_per_minute=150)
+
+
 def _log_http_response(tag: str, r: requests.Response, truncate: int = 500):
     """Log completo de una respuesta HTTP de la API de Meta."""
     logger.debug(
@@ -167,121 +195,15 @@ def _is_transient(err):
     return False
 
 
-# Patrones de mensaje que indican que la página no tiene IG conectado
-_IG_NO_ACCESS_PATTERNS = (
-    "no tiene acceso a instagram",
-    "not connected to instagram",
-    "no instagram account",
-    "no tiene una cuenta de instagram",
-    "página no tiene cuenta de instagram",
-    "no tiene cuenta de instagram conectada",
-    "instagram identity",
-    "instagram account is not connected",
-)
-_IG_NO_ACCESS_SUBCODES = (1487390, 1487079, 1815174)
-
-
-# PBIA (Page-Backed Instagram Account) — cache para no llamar a la API mas de una vez por pagina
-_PAGE_ID = None              # se setea desde fetch_initial_config
-_PBIA_CACHE = {}             # page_id -> pbia_id (o None si fallo)
-_PBIA_LOCK = threading.Lock()
-
-
-def _ensure_pbia():
-    """Crea (o recupera) la PBIA para _PAGE_ID. Idempotente y cacheada por page_id.
-    Retorna el pbia_id si existe/se creo, None si fallo o no hay page_id.
-    """
-    if not _PAGE_ID:
-        logger.error("PBIA: no hay page_id disponible (object_story_spec.page_id no se detecto)")
-        return None
-
-    with _PBIA_LOCK:
-        if _PAGE_ID in _PBIA_CACHE:
-            return _PBIA_CACHE[_PAGE_ID]
-
-        url = f"{BASE_URL}/{_PAGE_ID}/page_backed_instagram_accounts"
-        logger.warning("PBIA: creando/obteniendo para page_id=%s", _PAGE_ID)
-        try:
-            r = requests.post(url, data={"access_token": ACCESS_TOKEN}, timeout=30)
-            _log_http_response(f"PBIA_CREATE({_PAGE_ID})", r)
-            data = r.json()
-        except Exception as e:
-            logger.error("PBIA: excepcion al llamar al endpoint: %s", e)
-            _PBIA_CACHE[_PAGE_ID] = None
-            return None
-
-        if "error" in data:
-            _log_api_error(f"PBIA_CREATE({_PAGE_ID})", data["error"])
-            _PBIA_CACHE[_PAGE_ID] = None
-            return None
-
-        pbia_id = data.get("id")
-        _PBIA_CACHE[_PAGE_ID] = pbia_id
-        logger.warning("PBIA: OK pbia_id=%s para page_id=%s", pbia_id, _PAGE_ID)
-        return pbia_id
-
-
-def _autofix_payload(payload, err):
-    """Ajusta el payload in-place ante errores conocidos de Meta. Devuelve True si modifico algo."""
-    if not isinstance(payload, dict):
-        return False
-
-    subcode = err.get("error_subcode")
-    msg = (err.get("message") or "").lower()
-    user_msg = (err.get("error_user_msg") or "").lower()
-    user_title = (err.get("error_user_title") or "").lower()
-    error_data = str(err.get("error_data") or "")
-    full_text = f"{msg} {user_msg} {user_title}"
-
-    targeting = payload.get("targeting")
-    if not isinstance(targeting, dict):
-        return False
-
-    ig_positions = targeting.get("instagram_positions")
-    ig_positions = ig_positions if isinstance(ig_positions, list) else None
-
-    # FIX 1: explore_home requiere explore (subcode 2490392)
-    if subcode == 2490392 or ("instagram_positions" in error_data and ("explore" in full_text or "explorar" in full_text)):
-        if ig_positions is not None:
-            if "explore_home" in ig_positions and "explore" not in ig_positions:
-                ig_positions.append("explore")
-                logger.warning("AUTOFIX: anadido 'explore' a instagram_positions (subcode 2490392)")
-                return True
-            if "explore" in ig_positions and "explore_home" not in ig_positions:
-                ig_positions.append("explore_home")
-                logger.warning("AUTOFIX: anadido 'explore_home' a instagram_positions")
-                return True
-            if "explore_home" in ig_positions:
-                ig_positions.remove("explore_home")
-                logger.warning("AUTOFIX: removido 'explore_home' (no pudo emparejarse)")
-                return True
-
-    # FIX 2: pagina sin Instagram conectado -> crear PBIA on-demand y reintentar
-    # NO se remueve Instagram. En su lugar se crea una Page-Backed Instagram Account
-    # (PBIA) para que la fan page pueda publicar en IG sin tener cuenta IG real.
-    # La llamada es idempotente y se cachea por page_id, asi se ejecuta solo cuando
-    # Meta arroja el error (no preventivamente).
-    if subcode in _IG_NO_ACCESS_SUBCODES or any(p in full_text for p in _IG_NO_ACCESS_PATTERNS):
-        pbia_id = _ensure_pbia()
-        if pbia_id:
-            logger.warning("AUTOFIX: PBIA lista (id=%s). Reintentando con misma config.", pbia_id)
-            return True
-        logger.error(
-            "AUTOFIX FAIL: no se pudo crear/obtener PBIA. "
-            "Verifica permisos del token (pages_manage_ads, ads_management) "
-            "y que la fan page sea elegible para PBIA en Business Manager."
-        )
-        return False
-
-    return False
-
-
 def api_batch(sub_requests):
     attempt = 0
     urls_summary = [sr.get("relative_url", "?")[:80] for sr in sub_requests]
     logger.info("BATCH request (%d sub-requests): %s", len(sub_requests), urls_summary)
 
     while True:
+        # Respetar rate limit ANTES de llamar
+        RATE_LIMITER.acquire(tokens=1)
+        
         try:
             r = requests.post(
                 f"{BASE_URL}/",
@@ -324,20 +246,18 @@ def api_batch(sub_requests):
 
 def api_post(endpoint, payload):
     url = f"{BASE_URL}/{endpoint}"
+    full_payload = {**payload, "access_token": ACCESS_TOKEN}
     rl_attempt = 0
     tr_attempt = 0
-    autofix_attempts = 0
-    MAX_AUTOFIX = 3
-
-    # Trabajar con copia para que el autofix no mute el payload del caller
-    payload = copy.deepcopy(payload)
 
     # Log del payload sin access_token
     logger.info("POST %s | payload_keys=%s", endpoint, list(payload.keys()))
     logger.debug("POST %s | payload=%s", endpoint, json.dumps(payload, ensure_ascii=False, default=str)[:600])
 
     while True:
-        full_payload = {**payload, "access_token": ACCESS_TOKEN}
+        # Respetar rate limit ANTES de llamar
+        RATE_LIMITER.acquire(tokens=1)
+        
         try:
             r = requests.post(url, json=full_payload, timeout=30)
             _log_http_response(f"POST({endpoint})", r)
@@ -367,12 +287,6 @@ def api_post(endpoint, payload):
             time.sleep(TRANSIENT_SLEEP)
             continue
 
-        if autofix_attempts < MAX_AUTOFIX and _autofix_payload(payload, err):
-            autofix_attempts += 1
-            logger.warning("POST %s | autofix aplicado, retry %d/%d", endpoint, autofix_attempts, MAX_AUTOFIX)
-            time.sleep(SLEEP_BETWEEN)
-            continue
-
         logger.error("POST %s | FATAL error, no more retries", endpoint)
         return None, err
 
@@ -399,6 +313,21 @@ def find_existing_ad_in_adset(adset_id):
     found = data[0].get("id") if data else None
     logger.info("RECOVER adset %s | found_ad=%s", adset_id, found)
     return found
+
+
+def check_ad_exists_in_adset(adset_id):
+    """Verificar si un adset REALMENTE tiene un ad en Meta"""
+    logger.info("CHECK_AD_EXISTS adset %s", adset_id)
+    results = api_batch([
+        {"method":"GET","relative_url":f"{adset_id}/ads?fields=id&limit=1"},
+    ])
+    if results[0]["code"] != 200:
+        logger.warning("CHECK_AD_EXISTS adset %s lookup failed: HTTP %d", adset_id, results[0]["code"])
+        return False
+    data = results[0]["body"].get("data", [])
+    exists = len(data) > 0
+    logger.info("CHECK_AD_EXISTS adset %s | exists=%s", adset_id, exists)
+    return exists
 
 
 def sk_adset(i):
@@ -440,12 +369,6 @@ def clean_adset_payload(adset):
 
     targeting = payload.get("targeting", {})
     targeting.pop("age_range", None)
-
-    # FIX: Meta exige que si se usa "explore_home" tambien este "explore"
-    ig_positions = targeting.get("instagram_positions", [])
-    if "explore_home" in ig_positions and "explore" not in ig_positions:
-        ig_positions.append("explore")
-        logger.info("AUTO-FIX: added 'explore' to instagram_positions (required by explore_home)")
 
     promoted = payload.get("promoted_object", {})
     promoted.pop("smart_pse_enabled", None)
@@ -513,11 +436,10 @@ def fetch_initial_config(campaign_id):
         [
             {"method": "GET", "relative_url": f"{seed['adset_id']}?fields={ADSET_FIELDS}"},
             {"method": "GET", "relative_url": f"{seed['ad_id']}?fields=name"},
-            {"method": "GET", "relative_url": f"{seed['creative_id']}?fields={CR_FIELDS}"},
         ]
     )
 
-    labels = ["adset", "ad", "creative"]
+    labels = ["adset", "ad"]
     for idx, label in enumerate(labels):
         if results[idx]["code"] != 200:
             message = results[idx]["body"].get("error", {}).get("message", "")
@@ -525,17 +447,6 @@ def fetch_initial_config(campaign_id):
 
     adset_data = results[0]["body"]
     ad_data = results[1]["body"]
-    cr_spec = clean_creative_spec(results[2]["body"])
-
-    # Detectar page_id para autofix de PBIA (solo se usa si Meta lanza el error de "no IG")
-    global _PAGE_ID
-    osp = cr_spec.get("object_story_spec") or {}
-    detected_page_id = osp.get("page_id")
-    if detected_page_id:
-        _PAGE_ID = detected_page_id
-        logger.info("PAGE_ID detectado para PBIA on-demand: %s", _PAGE_ID)
-    else:
-        logger.warning("PAGE_ID no detectado en object_story_spec (PBIA no estara disponible si Meta lanza error de no-IG)")
 
     # Capturar estado y programación original
     orig_status = adset_data.get("status", "ACTIVE")
@@ -550,17 +461,17 @@ def fetch_initial_config(campaign_id):
     print(f"  Campana     : {campaign_id}")
     print(f"  Adset       : {adset_data['name']}")
     print(f"  Ad          : {ad_data['name']}")
+    print(f"  Creative    : {seed['creative_id']} (REUTILIZADO)")
     print(f"  Programación: status={orig_status}, start={orig_start_time}, end={orig_end_time}")
 
     return {
         "adset_base": adset_base,
         "adset_name": adset_data["name"],
         "ad_name": ad_data["name"],
-        "cr_spec": cr_spec,
+        "creative_id": seed["creative_id"],
         "orig_status": orig_status,
         "orig_start_time": orig_start_time,
         "orig_end_time": orig_end_time,
-        "original_creative_id": seed["creative_id"],  # FIX: reusar creative original
     }
 
 
@@ -569,7 +480,7 @@ def preflight_campaign(camp_id):
     results = api_batch(
         [
             {"method": "GET", "relative_url": f"{camp_id}/adsets?fields=id&limit=200"},
-            {"method": "GET", "relative_url": f"{camp_id}/ads?fields=id,adset_id&limit=200"},
+            {"method": "GET", "relative_url": f"{camp_id}/ads?fields=id,adset_id&limit=500"},
         ]
     )
 
@@ -708,23 +619,23 @@ def run_for_campaign(campaign_id):
                         "adset_id": adset_id, "creative_id": "", "ad_id": "",
                         "status": "GUARD_ADSET_HAS_AD", "note": "preflight"})
                     return
-                cr_id = state.get(key, {}).get("creative_id")
-
-            # ── Creative ───────────────────────────────────────────────────
-            # FIX: Reusar siempre el creative_id original. No crear uno nuevo.
-            # Crear un nuevo creative genera un ID distinto, pierde el historial
-            # de aprendizaje de Meta y los social proof (likes/comentarios).
-            if not cr_id:
-                cr_id = cfg["original_creative_id"]
+                # Marcar adset como siendo procesado (Guard B.5)
+                adsets_with_ad.add(adset_id)
+            
+            # Guard B.5 — Verificar si Meta REALMENTE tiene un ad (edge case)
+            if check_ad_exists_in_adset(adset_id):
+                print(f"  i={i:02d} GUARD adset tiene ad (real check)")
                 with lock:
-                    state.setdefault(key, {})["creative_id"] = cr_id
-                    unsaved_changes += 1
-                    print(f"  i={i:02d} creative REUSED {cr_id}")
-                    if unsaved_changes >= SAVE_INTERVAL:
-                        save_state(state, state_file)
-                        unsaved_changes = 0
+                    adsets_with_ad.discard(adset_id)  # Revertir marca si falsa alarma
+                    total_guard += 1
+                    writer.writerow({"timestamp": ts, "i": i, "campaign_id": campaign_id,
+                        "adset_id": adset_id, "creative_id": "", "ad_id": "",
+                        "status": "GUARD_ADSET_HAS_AD_REAL", "note": "meta check"})
+                return
 
             # ── Ad ─────────────────────────────────────────────────────────
+            # Reutilizar creative en lugar de crear uno nuevo
+            cr_id = cfg["creative_id"]
             ad_id, err = api_post(
                 f"{ACCOUNT_ID}/ads",
                 {
@@ -798,20 +709,19 @@ def run_for_campaign(campaign_id):
 
     csvfile.close()
 
-    logger.info("=" * 65)
-    logger.info("[5/5] RESUMEN para campaign %s", campaign_id)
-    logger.info("=" * 65)
-    logger.info("  OK      : %d", total_ok)
-    logger.info("  Skip    : %d", total_skip)
-    logger.info("  Guards  : %d", total_guard)
-    logger.info("  Fallos  : %d", total_fail)
-    logger.info("  State   : %s", state_file)
-    logger.info("  Log CSV : %s", log_csv)
+    print("[5/5] RESUMEN")
+    print("=" * 65)
+    print(f"  OK      : {total_ok}")
+    print(f"  Skip    : {total_skip}")
+    print(f"  Guards  : {total_guard}")
+    print(f"  Fallos  : {total_fail}")
+    print(f"  State   : {state_file}")
+    print(f"  Log     : {log_csv}")
 
     if total_fail == 0 and total_guard == 0:
-        logger.info("  COMPLETO - %d nuevas copias creadas.", total_ok)
+        print(f"  COMPLETO - {total_ok} nuevas copias creadas.")
     elif total_fail > 0:
-        logger.warning("  CON ERRORES - vuelve a ejecutar para reintentar.")
+        print("  CON ERRORES - vuelve a ejecutar para reintentar.")
 
 
 def main():

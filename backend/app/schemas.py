@@ -49,6 +49,47 @@ class ReduceBudgetsRequest(BaseModel):
     targetBudget: Optional[float] = 1.0
 
 
+class DailyReportRunRequest(BaseModel):
+    configId: str
+    periods: Optional[List[str]] = None
+
+
+class RulesCondition(BaseModel):
+    metric: str
+    op: str
+    val: float
+
+
+class RulesCreateRequest(BaseModel):
+    source: str = Field(pattern="^(preset|custom)$")
+    presetId: Optional[str] = None
+    customType: Optional[str] = None
+    customAction: Optional[str] = None
+    customHour: Optional[int] = None
+    customMinute: Optional[int] = None
+    customActionCondition: Optional[str] = None
+    timeRange: Optional[str] = None
+    checkFreq: Optional[str] = None
+    conditions: Optional[List[RulesCondition]] = None
+    accountId: str
+    accountName: str
+    campaignIds: List[str]
+    customName: Optional[str] = None
+
+
+class RulesToggleRequest(BaseModel):
+    enabled: bool
+
+
+class RulesBulkToggleRequest(BaseModel):
+    ruleIds: List[str]
+    action: str = Field(pattern="^(pause|activate)$")
+
+
+class RulesBulkDeleteRequest(BaseModel):
+    ruleIds: List[str]
+
+
 class JobStartResponse(BaseModel):
     jobId: str
     status: str
