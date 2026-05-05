@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """META ADS CLONE - SINGLE CAMPAIGN
-Duplica 49 veces (adicionales) un adset y su ad dentro de una sola campana.
+Duplica N veces (adicionales) un adset y su ad dentro de una sola campana.
 """
 
 import argparse
@@ -69,10 +69,20 @@ def _log_api_error(tag: str, err: dict):
 _parser = argparse.ArgumentParser(description="META ADS CLONE - SINGLE CAMPAIGN (multi)")
 _parser.add_argument("--campaign-ids", nargs="+", required=True, help="IDs de las campanas a duplicar")
 _parser.add_argument("--access-token", required=True, help="Access token de Meta Ads")
+_parser.add_argument("--copies-to-create", type=int, default=49, help="Cantidad de copias adicionales por campana")
+_parser.add_argument("--campaign-adset-limit", type=int, default=0, help="Limite de adsets por campana (0 = copies+1)")
 _args = _parser.parse_args()
 
 ACCESS_TOKEN = _args.access_token
 CAMPAIGN_IDS = _args.campaign_ids
+
+if _args.copies_to_create <= 0:
+    print("[!] --copies-to-create debe ser mayor a 0")
+    sys.exit(1)
+
+if _args.campaign_adset_limit < 0:
+    print("[!] --campaign-adset-limit no puede ser negativo")
+    sys.exit(1)
 
 def obtener_campania(campaign_id: str, access_token: str, api_version: str = "v23.0") -> dict:
    
@@ -126,8 +136,8 @@ else:
 RESULT = obtener_campania(CAMPAIGN_IDS[0], ACCESS_TOKEN)
 
 ACCOUNT_ID = RESULT["account_id"]
-COPIES_TO_CREATE = 49
-CAMPAIGN_ADSET_LIMIT = 50
+COPIES_TO_CREATE = int(_args.copies_to_create)
+CAMPAIGN_ADSET_LIMIT = int(_args.campaign_adset_limit) if int(_args.campaign_adset_limit) > 0 else COPIES_TO_CREATE + 1
 MULTI_ADVERTISER_ADS = False
 
 SLEEP_BETWEEN = 0.6

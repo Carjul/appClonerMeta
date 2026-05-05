@@ -20,6 +20,7 @@ export default function CampaignsPage() {
     selectedAccountId,
     selectedIds,
     bulkCampaignId,
+    singleCopies,
     targetStatus,
     activeConfig,
     reduceExecute,
@@ -33,6 +34,7 @@ export default function CampaignsPage() {
     setConfigId,
     setExpandAllAccounts,
     setBulkCampaignId,
+    setSingleCopies,
     setTargetStatus,
     setReduceExecute,
     setReduceMinSpend,
@@ -85,13 +87,15 @@ export default function CampaignsPage() {
         ))}
       </section>
 
-      <CampaignActionsPanel
-        selectedCount={selectedIds.length}
-        bulkCampaignId={bulkCampaignId}
-        onChangeBulkCampaignId={setBulkCampaignId}
-        onRunBulk={runBulk}
-        onRunSingle={runSingle}
-        targetStatus={targetStatus}
+        <CampaignActionsPanel
+          selectedCount={selectedIds.length}
+          bulkCampaignId={bulkCampaignId}
+          onChangeBulkCampaignId={setBulkCampaignId}
+          singleCopies={singleCopies}
+          onChangeSingleCopies={setSingleCopies}
+          onRunBulk={runBulk}
+          onRunSingle={runSingle}
+          targetStatus={targetStatus}
         onChangeTargetStatus={setTargetStatus}
         onRunStatus={runCampaignStatus}
         onRunDelete={runDeleteCampaigns}

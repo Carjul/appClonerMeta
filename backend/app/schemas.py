@@ -26,6 +26,7 @@ class BulkCloneRequest(BaseModel):
 class SingleCloneRequest(BaseModel):
     configId: str
     campaignIds: List[str]
+    copiesToCreate: Optional[int] = 49
 
 
 class DeleteCampaignsRequest(BaseModel):

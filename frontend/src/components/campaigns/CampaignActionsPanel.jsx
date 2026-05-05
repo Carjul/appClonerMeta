@@ -4,6 +4,8 @@ export default function CampaignActionsPanel({
   selectedCount,
   bulkCampaignId,
   onChangeBulkCampaignId,
+  singleCopies,
+  onChangeSingleCopies,
   onRunBulk,
   onRunSingle,
   targetStatus,
@@ -34,6 +36,15 @@ export default function CampaignActionsPanel({
             <span className="action-badge badge-single">SINGLE</span>
           </h4>
           <p>Seleccionadas: {selectedCount}</p>
+          <label className="field-label">Copias por campaña</label>
+          <input
+            type="number"
+            min="1"
+            step="1"
+            value={singleCopies}
+            onChange={(e) => onChangeSingleCopies(e.target.value)}
+            required
+          />
           <div className="clone-footer">
             <button className="btn btn-primary" onClick={onRunSingle} disabled={selectedCount === 0}>Ejecutar single</button>
           </div>

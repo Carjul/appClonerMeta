@@ -84,7 +84,8 @@ def _progress_from_line(job_type: str, payload: Dict[str, Any], line: str, count
         return None
 
     if job_type == "single_clone":
-        total = max(1, len(payload.get("campaignIds", [])) * 49)
+        copies_to_create = int(payload.get("copiesToCreate", 49) or 49)
+        total = max(1, len(payload.get("campaignIds", [])) * max(1, copies_to_create))
         if " ad OK " in f" {text} ":
             counters["ok"] = counters.get("ok", 0) + 1
         if " SKIP completo" in text:
@@ -383,9 +384,10 @@ def _rebuild_job_command(job_doc: Dict[str, Any]) -> tuple[List[str], Dict[str, 
     if job_type == "single_clone":
         token = _get_config_token(config_id)
         campaign_ids = payload.get("campaignIds", [])
+        copies_to_create = int(payload.get("copiesToCreate", 49) or 49)
         if not token or not campaign_ids:
             raise RuntimeError("Missing token or campaignIds for single_clone rerun")
-        return single_clone_command(campaign_ids, token)
+        return single_clone_command(campaign_ids, token, copies_to_create=copies_to_create)
 
     if job_type == "delete_campaigns":
         token = _get_config_token(config_id)

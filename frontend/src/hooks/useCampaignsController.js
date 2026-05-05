@@ -13,6 +13,7 @@ export default function useCampaignsController() {
   const [jobLogs, setJobLogs] = useState([]);
   const [selectedJobId, setSelectedJobId] = useState("");
   const [bulkCampaignId, setBulkCampaignId] = useState("");
+  const [singleCopies, setSingleCopies] = useState("49");
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [targetStatus, setTargetStatus] = useState("PAUSED");
   const [accountFilter, setAccountFilter] = useState("all");
@@ -357,9 +358,14 @@ export default function useCampaignsController() {
 
   async function runSingle() {
     if (!configId || selectedIds.length === 0) return;
+    const copiesToCreate = Number(singleCopies);
+    if (!Number.isInteger(copiesToCreate) || copiesToCreate <= 0) {
+      setAlert({ type: "error", message: "Copias por campaña debe ser un entero mayor a 0." });
+      return;
+    }
     const confirm = await Swal.fire({
       title: "Confirmar single clone",
-      text: `Se duplicaran ${selectedIds.length} campanas seleccionadas.`,
+      text: `Se duplicaran ${selectedIds.length} campanas seleccionadas (${copiesToCreate} copias por campana).`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Si, duplicar",
@@ -368,7 +374,7 @@ export default function useCampaignsController() {
     if (!confirm.isConfirmed) return;
 
     setAlert(null);
-    const res = await api.runSingle(configId, selectedIds);
+    const res = await api.runSingle(configId, selectedIds, copiesToCreate);
     setSelectedJobId(res.jobId);
     setJobLogs([]);
 
@@ -567,6 +573,7 @@ export default function useCampaignsController() {
     selectedAccountId,
     selectedIds,
     bulkCampaignId,
+    singleCopies,
     targetStatus,
     activeConfig,
     reduceExecute,
@@ -581,6 +588,7 @@ export default function useCampaignsController() {
     setConfigId,
     setExpandAllAccounts,
     setBulkCampaignId,
+    setSingleCopies,
     setTargetStatus,
     setReduceExecute,
     setReduceMinSpend,

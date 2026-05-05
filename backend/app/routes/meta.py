@@ -75,12 +75,15 @@ def run_bulk_clone(payload: BulkCloneRequest):
 def run_single_clone(payload: SingleCloneRequest):
     if not payload.campaignIds:
         raise HTTPException(status_code=400, detail="campaignIds is required")
+    copies_to_create = payload.copiesToCreate if payload.copiesToCreate is not None else 49
+    if copies_to_create <= 0:
+        raise HTTPException(status_code=400, detail="copiesToCreate must be greater than 0")
     cfg = _get_config(payload.configId)
-    cmd, artifacts = single_clone_command(payload.campaignIds, cfg["access_token"])
+    cmd, artifacts = single_clone_command(payload.campaignIds, cfg["access_token"], copies_to_create=copies_to_create)
     return create_job(
         job_type="single_clone",
         config_id=payload.configId,
-        payload={"campaignIds": payload.campaignIds},
+        payload={"campaignIds": payload.campaignIds, "copiesToCreate": copies_to_create},
         cmd=cmd,
         artifacts=artifacts,
     )
