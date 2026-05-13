@@ -27,6 +27,7 @@ class SingleCloneRequest(BaseModel):
     configId: str
     campaignIds: List[str]
     copiesToCreate: Optional[int] = 49
+    adsPerAdset: Optional[int] = 1
 
 
 class DeleteCampaignsRequest(BaseModel):

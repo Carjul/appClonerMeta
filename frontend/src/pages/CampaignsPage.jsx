@@ -21,6 +21,7 @@ export default function CampaignsPage() {
     selectedIds,
     bulkCampaignId,
     singleCopies,
+    singleAdsPerAdset,
     targetStatus,
     activeConfig,
     reduceExecute,
@@ -35,6 +36,7 @@ export default function CampaignsPage() {
     setExpandAllAccounts,
     setBulkCampaignId,
     setSingleCopies,
+    setSingleAdsPerAdset,
     setTargetStatus,
     setReduceExecute,
     setReduceMinSpend,
@@ -93,6 +95,8 @@ export default function CampaignsPage() {
           onChangeBulkCampaignId={setBulkCampaignId}
           singleCopies={singleCopies}
           onChangeSingleCopies={setSingleCopies}
+          singleAdsPerAdset={singleAdsPerAdset}
+          onChangeSingleAdsPerAdset={setSingleAdsPerAdset}
           onRunBulk={runBulk}
           onRunSingle={runSingle}
           targetStatus={targetStatus}

@@ -85,11 +85,12 @@ def _progress_from_line(job_type: str, payload: Dict[str, Any], line: str, count
 
     if job_type == "single_clone":
         copies_to_create = int(payload.get("copiesToCreate", 49) or 49)
-        total = max(1, len(payload.get("campaignIds", [])) * max(1, copies_to_create))
+        ads_per_adset = int(payload.get("adsPerAdset", 1) or 1)
+        total = max(1, len(payload.get("campaignIds", [])) * max(1, copies_to_create) * max(1, ads_per_adset))
         if " ad OK " in f" {text} ":
             counters["ok"] = counters.get("ok", 0) + 1
         if " SKIP completo" in text:
-            counters["ok"] = counters.get("ok", 0) + 1
+            counters["ok"] = counters.get("ok", 0) + max(1, ads_per_adset)
         if "GUARD" in text or "ERR_" in text:
             counters["done"] = counters.get("done", 0) + 1
         done = max(counters.get("done", 0), counters.get("ok", 0))
@@ -307,7 +308,10 @@ def list_jobs(limit: int = 100) -> List[Dict[str, Any]]:
 
 
 def get_job(job_id: str) -> Optional[Dict[str, Any]]:
-    return serialize_doc(jobs_col.find_one({"_id": oid(job_id)}))
+    doc = jobs_col.find_one({"_id": oid(job_id)})
+    if doc is None:
+        return None
+    return serialize_doc(doc)
 
 
 def get_job_logs(job_id: str, limit: int = 5000) -> List[Dict[str, Any]]:
@@ -385,9 +389,15 @@ def _rebuild_job_command(job_doc: Dict[str, Any]) -> tuple[List[str], Dict[str, 
         token = _get_config_token(config_id)
         campaign_ids = payload.get("campaignIds", [])
         copies_to_create = int(payload.get("copiesToCreate", 49) or 49)
+        ads_per_adset = int(payload.get("adsPerAdset", 1) or 1)
         if not token or not campaign_ids:
             raise RuntimeError("Missing token or campaignIds for single_clone rerun")
-        return single_clone_command(campaign_ids, token, copies_to_create=copies_to_create)
+        return single_clone_command(
+            campaign_ids,
+            token,
+            copies_to_create=copies_to_create,
+            ads_per_adset=ads_per_adset,
+        )
 
     if job_type == "delete_campaigns":
         token = _get_config_token(config_id)

@@ -14,6 +14,7 @@ export default function useCampaignsController() {
   const [selectedJobId, setSelectedJobId] = useState("");
   const [bulkCampaignId, setBulkCampaignId] = useState("");
   const [singleCopies, setSingleCopies] = useState("49");
+  const [singleAdsPerAdset, setSingleAdsPerAdset] = useState("1");
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [targetStatus, setTargetStatus] = useState("PAUSED");
   const [accountFilter, setAccountFilter] = useState("all");
@@ -359,13 +360,18 @@ export default function useCampaignsController() {
   async function runSingle() {
     if (!configId || selectedIds.length === 0) return;
     const copiesToCreate = Number(singleCopies);
+    const adsPerAdset = Number(singleAdsPerAdset);
     if (!Number.isInteger(copiesToCreate) || copiesToCreate <= 0) {
       setAlert({ type: "error", message: "Copias por campaña debe ser un entero mayor a 0." });
       return;
     }
+    if (!Number.isInteger(adsPerAdset) || adsPerAdset <= 0) {
+      setAlert({ type: "error", message: "Ads por adset debe ser un entero mayor a 0." });
+      return;
+    }
     const confirm = await Swal.fire({
       title: "Confirmar single clone",
-      text: `Se duplicaran ${selectedIds.length} campanas seleccionadas (${copiesToCreate} copias por campana).`,
+      text: `Se duplicaran ${selectedIds.length} campanas seleccionadas (${copiesToCreate} copias por campana, ${adsPerAdset} ads por adset).`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Si, duplicar",
@@ -374,7 +380,7 @@ export default function useCampaignsController() {
     if (!confirm.isConfirmed) return;
 
     setAlert(null);
-    const res = await api.runSingle(configId, selectedIds, copiesToCreate);
+    const res = await api.runSingle(configId, selectedIds, copiesToCreate, adsPerAdset);
     setSelectedJobId(res.jobId);
     setJobLogs([]);
 
@@ -574,6 +580,7 @@ export default function useCampaignsController() {
     selectedIds,
     bulkCampaignId,
     singleCopies,
+    singleAdsPerAdset,
     targetStatus,
     activeConfig,
     reduceExecute,
@@ -589,6 +596,7 @@ export default function useCampaignsController() {
     setExpandAllAccounts,
     setBulkCampaignId,
     setSingleCopies,
+    setSingleAdsPerAdset,
     setTargetStatus,
     setReduceExecute,
     setReduceMinSpend,

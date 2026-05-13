@@ -42,7 +42,12 @@ def bulk_clone_command(campaign_id: str, token: str) -> Tuple[List[str], Dict[st
     return cmd, {}
 
 
-def single_clone_command(campaign_ids: List[str], token: str, copies_to_create: int = 49) -> Tuple[List[str], Dict[str, str]]:
+def single_clone_command(
+    campaign_ids: List[str],
+    token: str,
+    copies_to_create: int = 49,
+    ads_per_adset: int = 1,
+) -> Tuple[List[str], Dict[str, str]]:
     cmd = [
         PYTHON_BIN,
         "Meta_clone_fixed.py",
@@ -50,6 +55,8 @@ def single_clone_command(campaign_ids: List[str], token: str, copies_to_create: 
         token,
         "--copies-to-create",
         str(copies_to_create),
+        "--ads-per-adset",
+        str(ads_per_adset),
         "--campaign-ids",
         *campaign_ids,
     ]

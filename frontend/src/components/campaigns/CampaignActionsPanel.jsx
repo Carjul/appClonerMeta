@@ -6,6 +6,8 @@ export default function CampaignActionsPanel({
   onChangeBulkCampaignId,
   singleCopies,
   onChangeSingleCopies,
+  singleAdsPerAdset,
+  onChangeSingleAdsPerAdset,
   onRunBulk,
   onRunSingle,
   targetStatus,
@@ -43,6 +45,15 @@ export default function CampaignActionsPanel({
             step="1"
             value={singleCopies}
             onChange={(e) => onChangeSingleCopies(e.target.value)}
+            required
+          />
+          <label className="field-label">Ads por adset</label>
+          <input
+            type="number"
+            min="1"
+            step="1"
+            value={singleAdsPerAdset}
+            onChange={(e) => onChangeSingleAdsPerAdset(e.target.value)}
             required
           />
           <div className="clone-footer">
