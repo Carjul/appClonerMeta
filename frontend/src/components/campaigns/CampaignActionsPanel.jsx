@@ -4,6 +4,14 @@ export default function CampaignActionsPanel({
   selectedCount,
   bulkCampaignId,
   onChangeBulkCampaignId,
+  bulkCopies,
+  onChangeBulkCopies,
+  bulkStartCopy,
+  onChangeBulkStartCopy,
+  bulkAdsetsPerCampaign,
+  onChangeBulkAdsetsPerCampaign,
+  bulkAdsPerAdset,
+  onChangeBulkAdsPerAdset,
   singleCopies,
   onChangeSingleCopies,
   singleAdsPerAdset,
@@ -27,6 +35,14 @@ export default function CampaignActionsPanel({
             <span className="action-badge badge-bulk">BULK</span>
           </h4>
           <input placeholder="Campaign ID origen" value={bulkCampaignId} onChange={(e) => onChangeBulkCampaignId(e.target.value)} />
+          <label className="field-label">Campañas a crear</label>
+          <input type="number" min="1" step="1" value={bulkCopies} onChange={(e) => onChangeBulkCopies(e.target.value)} required />
+          <label className="field-label">Inicio #</label>
+          <input type="number" min="1" step="1" value={bulkStartCopy} onChange={(e) => onChangeBulkStartCopy(e.target.value)} required />
+          <label className="field-label">Adsets por campaña</label>
+          <input type="number" min="1" step="1" value={bulkAdsetsPerCampaign} onChange={(e) => onChangeBulkAdsetsPerCampaign(e.target.value)} required />
+          <label className="field-label">Ads por adset</label>
+          <input type="number" min="1" step="1" value={bulkAdsPerAdset} onChange={(e) => onChangeBulkAdsPerAdset(e.target.value)} required />
           <div className="clone-footer">
             <button className="btn btn-success" onClick={onRunBulk}>Ejecutar bulk</button>
           </div>

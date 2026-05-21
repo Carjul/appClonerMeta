@@ -381,9 +381,22 @@ def _rebuild_job_command(job_doc: Dict[str, Any]) -> tuple[List[str], Dict[str, 
     if job_type == "bulk_clone":
         token = _get_config_token(config_id)
         campaign_id = payload.get("campaignId")
+        copies = int(payload.get("copies", 4) or 4)
+        start_copy = int(payload.get("startCopy", 2) or 2)
+        adsets_per_campaign = int(payload.get("adsetsPerCampaign", 50) or 50)
+        ads_per_adset = int(payload.get("adsPerAdset", 1) or 1)
+        max_workers = int(payload.get("maxWorkers", 5) or 5)
         if not token or not campaign_id:
             raise RuntimeError("Missing token or campaignId for bulk_clone rerun")
-        return bulk_clone_command(campaign_id, token)
+        return bulk_clone_command(
+            campaign_id,
+            token,
+            copies=copies,
+            start_copy=start_copy,
+            adsets_per_campaign=adsets_per_campaign,
+            ads_per_adset=ads_per_adset,
+            max_workers=max_workers,
+        )
 
     if job_type == "single_clone":
         token = _get_config_token(config_id)

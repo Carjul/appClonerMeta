@@ -13,6 +13,10 @@ export default function useCampaignsController() {
   const [jobLogs, setJobLogs] = useState([]);
   const [selectedJobId, setSelectedJobId] = useState("");
   const [bulkCampaignId, setBulkCampaignId] = useState("");
+  const [bulkCopies, setBulkCopies] = useState("4");
+  const [bulkStartCopy, setBulkStartCopy] = useState("2");
+  const [bulkAdsetsPerCampaign, setBulkAdsetsPerCampaign] = useState("50");
+  const [bulkAdsPerAdset, setBulkAdsPerAdset] = useState("1");
   const [singleCopies, setSingleCopies] = useState("49");
   const [singleAdsPerAdset, setSingleAdsPerAdset] = useState("1");
   const [selectedAccountId, setSelectedAccountId] = useState("");
@@ -280,9 +284,29 @@ export default function useCampaignsController() {
 
   async function runBulk() {
     if (!configId || !bulkCampaignId) return;
+    const copies = Number(bulkCopies);
+    const startCopy = Number(bulkStartCopy);
+    const adsetsPerCampaign = Number(bulkAdsetsPerCampaign);
+    const adsPerAdset = Number(bulkAdsPerAdset);
+    if (!Number.isInteger(copies) || copies <= 0) {
+      setAlert({ type: "error", message: "Copias bulk debe ser un entero mayor a 0." });
+      return;
+    }
+    if (!Number.isInteger(startCopy) || startCopy <= 0) {
+      setAlert({ type: "error", message: "Inicio # debe ser un entero mayor a 0." });
+      return;
+    }
+    if (!Number.isInteger(adsetsPerCampaign) || adsetsPerCampaign <= 0) {
+      setAlert({ type: "error", message: "Adsets por campaña debe ser un entero mayor a 0." });
+      return;
+    }
+    if (!Number.isInteger(adsPerAdset) || adsPerAdset <= 0) {
+      setAlert({ type: "error", message: "Ads por adset debe ser un entero mayor a 0." });
+      return;
+    }
     const confirm = await Swal.fire({
       title: "Confirmar bulk clone",
-      text: `Se duplicara la campana ${bulkCampaignId}. Este proceso puede tardar varios minutos.`,
+      text: `Se crearan ${copies} campanas desde #${startCopy}, con ${adsetsPerCampaign} adsets por campana y ${adsPerAdset} ads por adset.`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Si, duplicar",
@@ -291,7 +315,7 @@ export default function useCampaignsController() {
     if (!confirm.isConfirmed) return;
 
     setAlert(null);
-    const res = await api.runBulk(configId, bulkCampaignId);
+    const res = await api.runBulk({ configId, campaignId: bulkCampaignId, copies, startCopy, adsetsPerCampaign, adsPerAdset });
     setSelectedJobId(res.jobId);
     setJobLogs([]);
 
@@ -579,6 +603,10 @@ export default function useCampaignsController() {
     selectedAccountId,
     selectedIds,
     bulkCampaignId,
+    bulkCopies,
+    bulkStartCopy,
+    bulkAdsetsPerCampaign,
+    bulkAdsPerAdset,
     singleCopies,
     singleAdsPerAdset,
     targetStatus,
@@ -595,6 +623,10 @@ export default function useCampaignsController() {
     setConfigId,
     setExpandAllAccounts,
     setBulkCampaignId,
+    setBulkCopies,
+    setBulkStartCopy,
+    setBulkAdsetsPerCampaign,
+    setBulkAdsPerAdset,
     setSingleCopies,
     setSingleAdsPerAdset,
     setTargetStatus,

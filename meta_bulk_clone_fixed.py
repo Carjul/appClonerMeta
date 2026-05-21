@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""META ADS CLONE v2.0 — FULL RUN — Hannah Brooks / V1_Agres_ video2
-Clonar campaña 120241270492130475 → crear #2..#5 (4 campañas) × 50 adsets × 1 ad = 200 ads
+"""META ADS CLONE v2.0 — FULL RUN
+Clonar una campaña base en N campañas × N adsets × N ads por adset.
 """
 
 import argparse, copy, csv, io, json, logging, os, sys, time
@@ -58,17 +58,31 @@ def _log_api_error(tag: str, err: dict):
 _parser = argparse.ArgumentParser(description="META ADS CLONE v2.0")
 _parser.add_argument("--campaign-id", required=True, help="ID de la campaña original a clonar")
 _parser.add_argument("--access-token", required=True, help="Access token de Meta Ads")
+_parser.add_argument("--copies", type=int, default=4, help="Cantidad de campañas clonadas a crear")
+_parser.add_argument("--start-copy", type=int, default=2, help="Numero inicial del sufijo #N")
+_parser.add_argument("--adsets-per-campaign", type=int, default=50, help="Adsets a crear por cada campaña clonada")
+_parser.add_argument("--ads-per-adset", type=int, default=1, help="Ads a crear dentro de cada adset nuevo")
+_parser.add_argument("--max-workers", type=int, default=5, help="Numero de hilos para paralelismo")
 _args = _parser.parse_args()
+
+if _args.copies <= 0:
+    _parser.error("--copies debe ser mayor a 0")
+if _args.adsets_per_campaign <= 0:
+    _parser.error("--adsets-per-campaign debe ser mayor a 0")
+if _args.ads_per_adset <= 0:
+    _parser.error("--ads-per-adset debe ser mayor a 0")
+if _args.max_workers <= 0:
+    _parser.error("--max-workers debe ser mayor a 0")
 
 ACCESS_TOKEN     = _args.access_token
 ORIG_CAMPAIGN_ID = _args.campaign_id
 
-def obtener_campania(campaign_id: str, access_token: str, api_version: str = "v23.0") -> dict:
+def obtener_campania(campaign_id: str, access_token: str, ads_per_adset: int, api_version: str = "v23.0") -> dict:
    
     fields = (
         "account_id,name,status,"
         "adsets.limit(100){name,status,daily_budget,lifetime_budget,billing_event,optimization_goal,targeting,promoted_object,bid_strategy},"
-        "ads.limit(100){name,status,creative{id},adset_id}"
+        f"ads.limit({max(100, ads_per_adset)}){{name,status,creative{{id}},adset_id}}"
     )
     url = f"https://graph.facebook.com/{api_version}/{campaign_id}"
     params = {"fields": fields, "access_token": access_token}
@@ -92,40 +106,60 @@ def obtener_campania(campaign_id: str, access_token: str, api_version: str = "v2
     if account and not account.startswith("act_"):
         account = f"act_{account}"
 
+    adsets = data.get("adsets", {}).get("data", []) if isinstance(data.get("adsets"), dict) else []
+    if not adsets:
+        raise RuntimeError("La campaña original no tiene adsets para usar como plantilla")
+
+    first_adset = adsets[0]
+    first_adset_id = first_adset.get("id")
     ads = data.get("ads", {}).get("data", []) if isinstance(data.get("ads"), dict) else []
-    first_ad = ads[0] if ads else None
+    source_ads = [ad for ad in ads if ad.get("adset_id") == first_adset_id]
+    if len(source_ads) < ads_per_adset:
+        raise RuntimeError(
+            f"El adset original {first_adset_id} tiene {len(source_ads)} ads, "
+            f"pero pediste --ads-per-adset {ads_per_adset}"
+        )
+    source_ads = source_ads[:ads_per_adset]
+    for idx, ad in enumerate(source_ads, start=1):
+        if not (ad.get("creative") or {}).get("id"):
+            raise RuntimeError(f"El anuncio fuente #{idx} no tiene creative_id")
 
     return {
         "name": data.get("name"),
         "campaign_id": campaign_id,
         "account_id": account,
-        "adset_id": first_ad.get("adset_id") if first_ad else None,
-        "ad_id": first_ad.get("id") if first_ad else None,
-        "creative_id": (first_ad.get("creative") or {}).get("id") if first_ad else None,
+        "adset_id": first_adset_id,
+        "source_ads": [
+            {
+                "ad_id": ad.get("id"),
+                "ad_name": ad.get("name") or f"Ad {idx}",
+                "creative_id": (ad.get("creative") or {}).get("id"),
+            }
+            for idx, ad in enumerate(source_ads, start=1)
+        ],
         "raw": data,
     }
 
-result =obtener_campania(ORIG_CAMPAIGN_ID, ACCESS_TOKEN)
+result = obtener_campania(ORIG_CAMPAIGN_ID, ACCESS_TOKEN, _args.ads_per_adset)
 
 ACCOUNT_ID       = result["account_id"]
 
 ORIG_ADSET_ID    = result["adset_id"]
-ORIG_AD_ID       = result["ad_id"]
-ORIG_CREATIVE_ID = result["creative_id"]
+SOURCE_ADS       = result["source_ads"]
 
 NAME_SUFFIX_ORIG  = "#1"
-N_VALUES          = [2, 3, 4, 5]   # campañas #2–#5
-ADSETS_PER_CAMP   = 50             # 50 adsets por campaña
+N_VALUES          = list(range(_args.start_copy, _args.start_copy + _args.copies))
+ADSETS_PER_CAMP   = _args.adsets_per_campaign
 
-CAMPAIGN_ADSET_LIMIT = 50
-ADSET_AD_LIMIT       = 1
+CAMPAIGN_ADSET_LIMIT = ADSETS_PER_CAMP
+ADSET_AD_LIMIT       = _args.ads_per_adset
 MULTI_ADVERTISER_ADS = False   # False = OPT_OUT, True = OPT_IN (desde ago 2024 es OPT_IN por defecto)
 
 SLEEP_BETWEEN     = 0.6
 TRANSIENT_SLEEP   = 3.0
 TRANSIENT_RETRIES = 4
 SAVE_INTERVAL     = 20  # checkpoint de estado cada N cambios (reduce I/O)
-MAX_WORKERS       = 5   # número de hilos para paralelismo (ajustable)
+MAX_WORKERS       = _args.max_workers   # número de hilos para paralelismo (ajustable)
 
 LOG_DIR = "logs"
 os.makedirs(LOG_DIR, exist_ok=True)
@@ -363,6 +397,7 @@ def save_state(state):
 
 def sk_camp(n):     return f"n={n}"
 def sk_adset(n, i): return f"n={n}_i={i}"
+def sk_ad(n, i, ad_index): return f"n={n}_i={i}_ad={ad_index}"
 
 # Console logging helper (thread-safe, compact)
 console_lock = threading.Lock()
@@ -435,19 +470,18 @@ def clean_adset_payload(adset: dict) -> dict:
 # ── FETCH INITIAL (1 batch call) ──────────────────────────────────────────────
 def fetch_initial_config():
     print("  Setup inicial (1 batch call)...", end="", flush=True)
+    first_creative_id = SOURCE_ADS[0]["creative_id"]
     results = api_batch([
         {"method":"GET","relative_url":f"{ORIG_CAMPAIGN_ID}?fields={CAMP_FIELDS}"},
         {"method":"GET","relative_url":f"{ORIG_ADSET_ID}?fields={ADSET_FIELDS}"},
-        {"method":"GET","relative_url":f"{ORIG_AD_ID}?fields=name"},
-        {"method":"GET","relative_url":f"{ORIG_CREATIVE_ID}?fields={CR_FIELDS}"},
+        {"method":"GET","relative_url":f"{first_creative_id}?fields={CR_FIELDS}"},
     ])
-    for idx, label in enumerate(["campaign","adset","ad","creative"]):
+    for idx, label in enumerate(["campaign","adset","creative"]):
         if results[idx]["code"] != 200:
             raise RuntimeError(f"Error leyendo {label}: {results[idx]['body'].get('error',{}).get('message')}")
     camp_data  = results[0]["body"]
     adset_data = results[1]["body"]
-    ad_data    = results[2]["body"]
-    cr_spec    = clean_creative_spec(results[3]["body"])
+    cr_spec    = clean_creative_spec(results[2]["body"])
 
     # Detectar page_id para autofix de PBIA (solo se usa si Meta lanza el error de "no IG")
     global _PAGE_ID
@@ -472,13 +506,13 @@ def fetch_initial_config():
     print(" OK")
     print(f"  Campana     : {camp_data['name']}")
     print(f"  Adset       : {adset_data['name']}")
-    print(f"  Ad          : {ad_data['name']}")
+    print(f"  Ads fuente  : {len(SOURCE_ADS)}")
     print(f"  Programación: status={orig_camp_status}, start={orig_start_time}, stop={orig_stop_time}")
     return {"orig_camp_name":camp_data["name"],"camp_base":camp_base,
             "adset_base":adset_base,"adset_name":adset_data["name"],
-            "ad_name":ad_data["name"],"cr_spec":cr_spec,
+            "source_ads":SOURCE_ADS,"cr_spec":cr_spec,
             "orig_camp_status":orig_camp_status,"orig_start_time":orig_start_time,"orig_stop_time":orig_stop_time,
-            "original_creative_id": ORIG_CREATIVE_ID}  # FIX: reusar creative original
+            }
 
 # ── PREFLIGHT (1 batch call por campaña) ──────────────────────────────────────
 def preflight_campaign(camp_id):
@@ -487,19 +521,21 @@ def preflight_campaign(camp_id):
         {"method":"GET","relative_url":f"{camp_id}/adsets?fields=id&limit=200"},
         {"method":"GET","relative_url":f"{camp_id}/ads?fields=id,adset_id&limit=200"},
     ])
-    adset_ids = set(); adsets_with_ad = set(); ok = True
+    adset_ids = set(); ads_by_adset = {}; ok = True
     if results[0]["code"] == 200:
         for a in results[0]["body"].get("data",[]): adset_ids.add(a["id"])
     else:
         ok = False
     if results[1]["code"] == 200:
-        for a in results[1]["body"].get("data",[]): adsets_with_ad.add(a.get("adset_id"))
+        for a in results[1]["body"].get("data",[]):
+            adset_id = a.get("adset_id")
+            if adset_id:
+                ads_by_adset.setdefault(adset_id, []).append(a.get("id"))
     else:
         ok = False
-    adsets_with_ad.discard(None)
     status = "OK" if ok else "parcial"
-    print(f" {status} — {len(adset_ids)} adsets, {len(adsets_with_ad)} con ad")
-    return {"adset_ids": adset_ids, "adsets_with_ad": adsets_with_ad, "ok": ok}
+    print(f" {status} — {len(adset_ids)} adsets, {sum(len(v) for v in ads_by_adset.values())} ads")
+    return {"adset_ids": adset_ids, "ads_by_adset": ads_by_adset, "ok": ok}
 
 # ── MAIN ──────────────────────────────────────────────────────────────────────
 def main():
@@ -560,7 +596,7 @@ def main():
         # Preflight
         pf = preflight_campaign(camp_id)
         existing_adsets = pf["adset_ids"]
-        adsets_with_ad  = pf["adsets_with_ad"]
+        ads_by_adset  = pf["ads_by_adset"]
         created_this_run: set = set()
 
         print(f"  {'─'*58}")
@@ -573,7 +609,9 @@ def main():
             ts = datetime.now(timezone.utc).isoformat()
 
             with lock:
-                if state.get(key_as, {}).get("ad_id"):
+                adset_state = state.get(key_as, {})
+                complete_ads = all(state.get(sk_ad(n, i, ad_index), {}).get("ad_id") for ad_index in range(1, ADSET_AD_LIMIT + 1))
+                if adset_state.get("adset_id") and complete_ads:
                     clog("SKIP", "SKIP completo (state)", n=n, i=i)
                     total_skip += 1
                     return
@@ -619,80 +657,82 @@ def main():
                         save_state(state); unsaved_changes = 0
                 time.sleep(SLEEP_BETWEEN)
 
-            # Guard B — adset ya tiene ad
+            # Ads — reusar los creative_id originales, uno por cada anuncio fuente.
             with lock:
-                has_ad = adset_id in adsets_with_ad
-            if has_ad:
-                clog("GUARD", "Adset ya tiene ad. Saltando.", n=n, i=i)
+                existing_ads_count = len(ads_by_adset.get(adset_id, []))
+            if existing_ads_count >= ADSET_AD_LIMIT:
+                clog("GUARD", f"Adset ya tiene {existing_ads_count}/{ADSET_AD_LIMIT} ads. Saltando.", n=n, i=i)
                 with lock:
                     total_guard += 1
                     writer.writerow({"timestamp":ts,"n":n,"i":i,"campaign_id":camp_id,
                         "campaign_name":new_name,"adset_id":adset_id,"creative_id":"","ad_id":"",
-                        "status":"GUARD_ADSET_HAS_AD","note":"preflight"})
+                        "status":"GUARD_ADSET_HAS_ADS","note":f"preflight {existing_ads_count}/{ADSET_AD_LIMIT}"})
                 return
 
-            # Creative — FIX: reusar el creative_id original, no crear uno nuevo.
-            # Crear un nuevo creative pierde el historial de aprendizaje de Meta
-            # y los social proof (likes/comentarios) del anuncio original.
-            with lock:
-                cr_id = state.get(key_as, {}).get("creative_id")
-            if not cr_id:
-                cr_id = cfg["original_creative_id"]
+            for ad_index, source_ad in enumerate(cfg["source_ads"], start=1):
+                key_ad = sk_ad(n, i, ad_index)
                 with lock:
-                    state.setdefault(key_as, {})["creative_id"] = cr_id
+                    saved_ad_id = state.get(key_ad, {}).get("ad_id")
+                if saved_ad_id:
+                    clog("SKIP", f"ad {ad_index}/{ADSET_AD_LIMIT} skip", n=n, i=i)
+                    total_skip += 1
+                    continue
+                if ad_index <= existing_ads_count:
+                    clog("GUARD", f"ad {ad_index}/{ADSET_AD_LIMIT} existe en Meta (preflight)", n=n, i=i)
+                    total_guard += 1
+                    continue
+
+                cr_id = source_ad["creative_id"]
+                with lock:
+                    state.setdefault(key_ad, {})["creative_id"] = cr_id
                     unsaved_changes += 1
                     if unsaved_changes >= SAVE_INTERVAL:
                         save_state(state); unsaved_changes = 0
-                clog("INFO", f"creative REUSED {cr_id}", n=n, i=i)
-            else:
-                clog("INFO", "creative skip", n=n, i=i)
+                clog("INFO", f"creative REUSED {cr_id} ad {ad_index}/{ADSET_AD_LIMIT}", n=n, i=i)
 
-            # Ad
-            ad_id, err = api_post(f"{ACCOUNT_ID}/ads", {
-                "name":     cfg["ad_name"],
-                "adset_id": adset_id,
-                "creative": {"creative_id": cr_id},
-                "status":   "ACTIVE",
-            })
-            if err:
-                if "NET_UNKNOWN_RESULT" in err.get("message", ""):
-                    recovered_ad_id = find_existing_ad_in_adset(adset_id)
-                    if recovered_ad_id:
-                        clog("WARN", f"ad recover OK {recovered_ad_id}", n=n, i=i)
-                        with lock:
-                            state.setdefault(key_as, {})["ad_id"] = recovered_ad_id
-                            adsets_with_ad.add(adset_id)
-                            unsaved_changes += 1
-                            total_ok += 1
-                            # Guardado inmediato para no volver a crear este slot tras una caida.
-                            save_state(state); unsaved_changes = 0
-                            writer.writerow({"timestamp":ts,"n":n,"i":i,"campaign_id":camp_id,
-                                "campaign_name":new_name,"adset_id":adset_id,"creative_id":cr_id,"ad_id":recovered_ad_id,
-                                "status":"OK_RECOVERED","note":"NET_UNKNOWN_RESULT"})
-                        time.sleep(SLEEP_BETWEEN)
-                        return
-                msg = err.get("message","")[:60]
-                clog("ERROR", f"ad FAIL: {msg}", n=n, i=i)
+                ad_id, err = api_post(f"{ACCOUNT_ID}/ads", {
+                    "name":     source_ad["ad_name"],
+                    "adset_id": adset_id,
+                    "creative": {"creative_id": cr_id},
+                    "status":   "ACTIVE",
+                })
+                if err:
+                    if "NET_UNKNOWN_RESULT" in err.get("message", ""):
+                        recovered_ad_id = find_existing_ad_in_adset(adset_id)
+                        if recovered_ad_id:
+                            clog("WARN", f"ad recover OK {recovered_ad_id}", n=n, i=i)
+                            with lock:
+                                state.setdefault(key_ad, {})["ad_id"] = recovered_ad_id
+                                ads_by_adset.setdefault(adset_id, []).append(recovered_ad_id)
+                                unsaved_changes += 1
+                                total_ok += 1
+                                save_state(state); unsaved_changes = 0
+                                writer.writerow({"timestamp":ts,"n":n,"i":i,"campaign_id":camp_id,
+                                    "campaign_name":new_name,"adset_id":adset_id,"creative_id":cr_id,"ad_id":recovered_ad_id,
+                                    "status":"OK_RECOVERED","note":f"ad_index={ad_index} NET_UNKNOWN_RESULT"})
+                            time.sleep(SLEEP_BETWEEN)
+                            continue
+                    msg = err.get("message","")[:60]
+                    clog("ERROR", f"ad {ad_index}/{ADSET_AD_LIMIT} FAIL: {msg}", n=n, i=i)
+                    with lock:
+                        total_fail += 1
+                        writer.writerow({"timestamp":ts,"n":n,"i":i,"campaign_id":camp_id,
+                            "campaign_name":new_name,"adset_id":adset_id,"creative_id":cr_id,"ad_id":"",
+                            "status":"ERR_AD","note":f"ad_index={ad_index} {msg}"})
+                    time.sleep(SLEEP_BETWEEN)
+                    continue
+
+                clog("OK", f"ad {ad_index}/{ADSET_AD_LIMIT} OK", n=n, i=i)
                 with lock:
-                    total_fail += 1
+                    state.setdefault(key_ad, {})["ad_id"] = ad_id
+                    ads_by_adset.setdefault(adset_id, []).append(ad_id)
+                    unsaved_changes += 1
+                    total_ok += 1
+                    save_state(state); unsaved_changes = 0
                     writer.writerow({"timestamp":ts,"n":n,"i":i,"campaign_id":camp_id,
-                        "campaign_name":new_name,"adset_id":adset_id,"creative_id":cr_id,"ad_id":"",
-                        "status":"ERR_AD","note":msg})
+                        "campaign_name":new_name,"adset_id":adset_id,"creative_id":cr_id,"ad_id":ad_id,
+                        "status":"OK","note":f"ad_index={ad_index}"})
                 time.sleep(SLEEP_BETWEEN)
-                return
-
-            clog("OK", "ad OK", n=n, i=i)
-            with lock:
-                state.setdefault(key_as, {})["ad_id"] = ad_id
-                adsets_with_ad.add(adset_id)
-                unsaved_changes += 1
-                total_ok += 1
-                # Guardado inmediato para minimizar recreaciones si el proceso termina con error.
-                save_state(state); unsaved_changes = 0
-                writer.writerow({"timestamp":ts,"n":n,"i":i,"campaign_id":camp_id,
-                    "campaign_name":new_name,"adset_id":adset_id,"creative_id":cr_id,"ad_id":ad_id,
-                    "status":"OK","note":""})
-            time.sleep(SLEEP_BETWEEN)
 
         # Ejecutar tasks en pool
         futures = []
@@ -719,8 +759,11 @@ def main():
         logger.info("        %s", cname)
         for i in range(1, ADSETS_PER_CAMP + 1):
             s = state.get(sk_adset(n, i), {})
-            logger.info("        adset=%s  creative=%s  ad=%s",
-                         s.get('adset_id','?'), s.get('creative_id','?'), s.get('ad_id','?'))
+            logger.info("        adset=%s", s.get('adset_id','?'))
+            for ad_index in range(1, ADSET_AD_LIMIT + 1):
+                a = state.get(sk_ad(n, i, ad_index), {})
+                logger.info("          ad[%d] creative=%s  ad=%s",
+                             ad_index, a.get('creative_id','?'), a.get('ad_id','?'))
     logger.info("  OK      : %d", total_ok)
     logger.info("  Skip    : %d", total_skip)
     logger.info("  Guards  : %d", total_guard)

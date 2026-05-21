@@ -20,6 +20,10 @@ export default function CampaignsPage() {
     selectedAccountId,
     selectedIds,
     bulkCampaignId,
+    bulkCopies,
+    bulkStartCopy,
+    bulkAdsetsPerCampaign,
+    bulkAdsPerAdset,
     singleCopies,
     singleAdsPerAdset,
     targetStatus,
@@ -35,6 +39,10 @@ export default function CampaignsPage() {
     setConfigId,
     setExpandAllAccounts,
     setBulkCampaignId,
+    setBulkCopies,
+    setBulkStartCopy,
+    setBulkAdsetsPerCampaign,
+    setBulkAdsPerAdset,
     setSingleCopies,
     setSingleAdsPerAdset,
     setTargetStatus,
@@ -93,6 +101,14 @@ export default function CampaignsPage() {
           selectedCount={selectedIds.length}
           bulkCampaignId={bulkCampaignId}
           onChangeBulkCampaignId={setBulkCampaignId}
+          bulkCopies={bulkCopies}
+          onChangeBulkCopies={setBulkCopies}
+          bulkStartCopy={bulkStartCopy}
+          onChangeBulkStartCopy={setBulkStartCopy}
+          bulkAdsetsPerCampaign={bulkAdsetsPerCampaign}
+          onChangeBulkAdsetsPerCampaign={setBulkAdsetsPerCampaign}
+          bulkAdsPerAdset={bulkAdsPerAdset}
+          onChangeBulkAdsPerAdset={setBulkAdsPerAdset}
           singleCopies={singleCopies}
           onChangeSingleCopies={setSingleCopies}
           singleAdsPerAdset={singleAdsPerAdset}

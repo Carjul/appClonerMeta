@@ -30,7 +30,15 @@ def explorer_command(bm_id: str, token: str) -> Tuple[List[str], Dict[str, str]]
     return cmd, {"output_json": output_path}
 
 
-def bulk_clone_command(campaign_id: str, token: str) -> Tuple[List[str], Dict[str, str]]:
+def bulk_clone_command(
+    campaign_id: str,
+    token: str,
+    copies: int = 4,
+    start_copy: int = 2,
+    adsets_per_campaign: int = 50,
+    ads_per_adset: int = 1,
+    max_workers: int = 5,
+) -> Tuple[List[str], Dict[str, str]]:
     cmd = [
         PYTHON_BIN,
         "meta_bulk_clone_fixed.py",
@@ -38,6 +46,16 @@ def bulk_clone_command(campaign_id: str, token: str) -> Tuple[List[str], Dict[st
         campaign_id,
         "--access-token",
         token,
+        "--copies",
+        str(copies),
+        "--start-copy",
+        str(start_copy),
+        "--adsets-per-campaign",
+        str(adsets_per_campaign),
+        "--ads-per-adset",
+        str(ads_per_adset),
+        "--max-workers",
+        str(max_workers),
     ]
     return cmd, {}
 

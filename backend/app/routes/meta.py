@@ -60,12 +60,42 @@ def explorer_cache(config_id: str):
 
 @router.post("/clone/bulk")
 def run_bulk_clone(payload: BulkCloneRequest):
+    copies = payload.copies if payload.copies is not None else 4
+    start_copy = payload.startCopy if payload.startCopy is not None else 2
+    adsets_per_campaign = payload.adsetsPerCampaign if payload.adsetsPerCampaign is not None else 50
+    ads_per_adset = payload.adsPerAdset if payload.adsPerAdset is not None else 1
+    max_workers = payload.maxWorkers if payload.maxWorkers is not None else 5
+    if copies <= 0:
+        raise HTTPException(status_code=400, detail="copies must be greater than 0")
+    if start_copy <= 0:
+        raise HTTPException(status_code=400, detail="startCopy must be greater than 0")
+    if adsets_per_campaign <= 0:
+        raise HTTPException(status_code=400, detail="adsetsPerCampaign must be greater than 0")
+    if ads_per_adset <= 0:
+        raise HTTPException(status_code=400, detail="adsPerAdset must be greater than 0")
+    if max_workers <= 0:
+        raise HTTPException(status_code=400, detail="maxWorkers must be greater than 0")
     cfg = _get_config(payload.configId)
-    cmd, artifacts = bulk_clone_command(payload.campaignId, cfg["access_token"])
+    cmd, artifacts = bulk_clone_command(
+        payload.campaignId,
+        cfg["access_token"],
+        copies=copies,
+        start_copy=start_copy,
+        adsets_per_campaign=adsets_per_campaign,
+        ads_per_adset=ads_per_adset,
+        max_workers=max_workers,
+    )
     return create_job(
         job_type="bulk_clone",
         config_id=payload.configId,
-        payload={"campaignId": payload.campaignId},
+        payload={
+            "campaignId": payload.campaignId,
+            "copies": copies,
+            "startCopy": start_copy,
+            "adsetsPerCampaign": adsets_per_campaign,
+            "adsPerAdset": ads_per_adset,
+            "maxWorkers": max_workers,
+        },
         cmd=cmd,
         artifacts=artifacts,
     )
