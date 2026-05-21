@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+import requests
 
 from app.db import configs_col
 from app.schemas import ConfigCreate, ConfigUpdate
@@ -72,3 +73,24 @@ def delete_config(config_id: str):
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Config not found")
     return {"ok": True}
+
+
+@router.post("/{config_id}/test")
+def test_config(config_id: str):
+    doc = configs_col.find_one({"_id": oid(config_id)})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Config not found")
+    token = (doc.get("access_token") or "").strip()
+    if not token:
+        raise HTTPException(status_code=400, detail="Config token not found")
+    res = requests.get("https://graph.facebook.com/v21.0/me", params={"fields": "id,name", "access_token": token}, timeout=30)
+    try:
+        payload = res.json()
+    except ValueError:
+        payload = {"error": {"message": res.text[:300]}}
+    ok = res.status_code < 400 and not payload.get("error")
+    updates = {"is_valid": ok, "last_tested_at": now_iso(), "last_error": "" if ok else payload.get("error", {}).get("message", str(payload)), "updated_at": now_iso()}
+    configs_col.update_one({"_id": oid(config_id)}, {"$set": updates})
+    if not ok:
+        raise HTTPException(status_code=400, detail=updates["last_error"])
+    return {"ok": True, "me": payload}

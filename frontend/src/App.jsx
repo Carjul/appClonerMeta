@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import ConfigurationPage from "./pages/ConfigurationPage";
 import CampaignsPage from "./pages/CampaignsPage";
 import DailyReportPage from "./pages/DailyReportPage";
+import FbCatalogModule from "./pages/FbCatalogModule";
 import RulesEnginePage from "./pages/RulesEnginePage";
 
 export default function App() {
@@ -9,6 +10,7 @@ export default function App() {
 
   const title = useMemo(() => {
     if (tab === "configs") return "Configuración";
+    if (tab === "fbCatalog") return "FB Catalog";
     if (tab === "daily") return "Dashboard";
     if (tab === "rules") return "Rules Engine";
     return "Campañas";
@@ -24,11 +26,15 @@ export default function App() {
         <div className="tabs">
           <button className={`nav-tab ${tab === "campaigns" ? "active" : ""}`} onClick={() => setTab("campaigns")}>
             <span className="nav-icon" aria-hidden="true">📣</span>
-            <span>Campañas</span>
+            <span>Clonar Campañas</span>
           </button>
           <button className={`nav-tab ${tab === "configs" ? "active" : ""}`} onClick={() => setTab("configs")}>
             <span className="nav-icon" aria-hidden="true">⚙️</span>
             <span>Configuración</span>
+          </button>
+          <button className={`nav-tab ${tab === "fbCatalog" ? "active" : ""}`} onClick={() => setTab("fbCatalog")}>
+            <span className="nav-icon" aria-hidden="true">▣</span>
+            <span>Crear Campañas</span>
           </button>
           <button className={`nav-tab ${tab === "daily" ? "active" : ""}`} onClick={() => setTab("daily")}>
             <span className="nav-icon" aria-hidden="true">📊</span>
@@ -42,7 +48,7 @@ export default function App() {
       </header>
       <main className="content">
 {/*         <h2>{title}</h2> */}
-        {tab === "configs" ? <ConfigurationPage /> : tab === "daily" ? <DailyReportPage /> : tab === "rules" ? <RulesEnginePage /> : <CampaignsPage />}
+        {tab === "configs" ? <ConfigurationPage /> : tab === "fbCatalog" ? <FbCatalogModule /> : tab === "daily" ? <DailyReportPage /> : tab === "rules" ? <RulesEnginePage /> : <CampaignsPage />}
       </main>
     </div>
   );

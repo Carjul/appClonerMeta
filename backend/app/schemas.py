@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 class ConfigCreate(BaseModel):
     name: str = Field(min_length=1)
-    bmId: str = Field(min_length=1)
+    bmId: str = ""
     accessToken: str = Field(min_length=1)
 
 

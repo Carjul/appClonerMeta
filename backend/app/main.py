@@ -25,9 +25,13 @@ from app.config import (
 )
 from app.routes.configs import router as configs_router
 from app.routes.daily_report import router as daily_report_router
+from app.routes.fb_catalog import public_router as fb_catalog_public_router
+from app.routes.fb_catalog import router as fb_catalog_router
 from app.routes.jobs import router as jobs_router
 from app.routes.meta import router as meta_router
 from app.routes.rules_engine import router as rules_engine_router
+from app.services.fb_catalog_planning_runner import fb_catalog_planning_runner_state, start_fb_catalog_planning_runner, stop_fb_catalog_planning_runner
+from app.services.fb_catalog_trick_runner import fb_catalog_trick_runner_state, start_fb_catalog_trick_runner, stop_fb_catalog_trick_runner
 from app.services.scheduler import scheduler_state, start_scheduler, stop_scheduler
 
 _HEALTH_PING_URL = f"{APP_URL}/api/health"
@@ -73,12 +77,16 @@ app.add_middleware(
 @app.on_event("startup")
 def _startup_scheduler() -> None:
     start_scheduler()
+    start_fb_catalog_trick_runner()
+    start_fb_catalog_planning_runner()
     _start_health_ping()
 
 
 @app.on_event("shutdown")
 def _shutdown_scheduler() -> None:
     stop_scheduler()
+    stop_fb_catalog_trick_runner()
+    stop_fb_catalog_planning_runner()
     _stop_health_ping()
 
 
@@ -102,11 +110,15 @@ def health():
             },
             "state": scheduler_state(),
         },
+        "fbCatalogTrickRunner": fb_catalog_trick_runner_state(),
+        "fbCatalogPlanningRunner": fb_catalog_planning_runner_state(),
     }
 
 
 app.include_router(configs_router)
 app.include_router(daily_report_router)
+app.include_router(fb_catalog_router)
+app.include_router(fb_catalog_public_router)
 app.include_router(jobs_router)
 app.include_router(meta_router)
 app.include_router(rules_engine_router)
