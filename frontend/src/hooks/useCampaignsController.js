@@ -2,6 +2,27 @@ import { useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
 import { api } from "../api";
 
+const EXPLORER_JOBS_KEY = "explorerJobs";
+
+function readExplorerJobs() {
+  try {
+    return JSON.parse(localStorage.getItem(EXPLORER_JOBS_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function writeExplorerJobs(rows) {
+  localStorage.setItem(EXPLORER_JOBS_KEY, JSON.stringify(rows));
+}
+
+function upsertExplorerJob(row) {
+  const rows = readExplorerJobs();
+  const next = [row, ...rows.filter((job) => job._id !== row._id)].slice(0, 50);
+  writeExplorerJobs(next);
+  return next;
+}
+
 export default function useCampaignsController() {
   const [configs, setConfigs] = useState([]);
   const [configId, setConfigId] = useState("");
@@ -42,9 +63,23 @@ export default function useCampaignsController() {
     if (!configId && rows[0]) setConfigId(rows[0]._id);
   }
 
+  async function loadExplorerJobs() {
+    const stored = readExplorerJobs();
+    const refreshed = await Promise.all(stored.map(async (job) => {
+      if (!["queued", "running"].includes(job.status)) return job;
+      try {
+        return await api.getJob(job._id);
+      } catch {
+        return { ...job, status: "expired", progress: { percent: job.progress?.percent || 0, message: "No disponible en memoria del backend" } };
+      }
+    }));
+    writeExplorerJobs(refreshed);
+    return refreshed;
+  }
+
   async function loadJobs() {
-    const rows = await api.listJobs();
-    setJobs(rows);
+    const [rows, explorerRows] = await Promise.all([api.listJobs(), loadExplorerJobs()]);
+    setJobs([...explorerRows, ...rows]);
   }
 
   useEffect(() => {
@@ -173,7 +208,15 @@ export default function useCampaignsController() {
     let stop = false;
     const timer = setInterval(async () => {
       if (stop) return;
-      const r = await api.getExplorerResult(explorerJobId);
+      let r;
+      try {
+        r = await api.getExplorerResult(explorerJobId);
+      } catch {
+        clearInterval(timer);
+        return;
+      }
+      upsertExplorerJob(r);
+      await loadJobs();
       if (r.status === "completed") {
         setAccounts((r.result && r.result.accounts) || []);
         clearInterval(timer);
@@ -263,8 +306,12 @@ export default function useCampaignsController() {
 
   async function openLogs(jobId) {
     setSelectedJobId(jobId);
-    const logs = await api.getJobLogs(jobId, 20000);
-    setJobLogs(logs);
+    try {
+      const logs = await api.getJobLogs(jobId, 20000);
+      setJobLogs(logs);
+    } catch {
+      setJobLogs([]);
+    }
     location.href = "#lb";
   }
 
@@ -275,6 +322,16 @@ export default function useCampaignsController() {
     setSelectedCampaigns({});
     setSelectedAccountId("");
     const res = await api.runExplorer(configId);
+    const localJob = {
+      _id: res.jobId,
+      type: "explorer",
+      config_id: configId,
+      payload: { configId, bmId: configs.find((cfg) => cfg._id === configId)?.bm_id || "" },
+      status: res.status || "queued",
+      created_at: new Date().toISOString(),
+      progress: { percent: 0, message: "En cola" },
+    };
+    upsertExplorerJob(localJob);
     setExplorerJobId(res.jobId);
     setSelectedJobId(res.jobId);
     setJobLogs([]);
@@ -519,7 +576,15 @@ export default function useCampaignsController() {
     if (!confirm.isConfirmed) return;
 
     for (const jobId of ids) {
-      await api.deleteJob(jobId);
+      const job = jobs.find((item) => item._id === jobId);
+      try {
+        await api.deleteJob(jobId);
+      } catch (e) {
+        if (job?.type !== "explorer") throw e;
+      }
+      if (job?.type === "explorer") {
+        writeExplorerJobs(readExplorerJobs().filter((item) => item._id !== jobId));
+      }
       if (selectedJobId === jobId) {
         setSelectedJobId("");
         setJobLogs([]);
@@ -560,7 +625,19 @@ export default function useCampaignsController() {
     let firstNewJobId = null;
     for (const jobId of ids) {
       try {
-        const res = await api.rerunJob(jobId);
+        const job = jobs.find((item) => item._id === jobId);
+        const res = job?.type === "explorer" ? await api.runExplorer(job.config_id || configId) : await api.rerunJob(jobId);
+        if (job?.type === "explorer" && res?.jobId) {
+          upsertExplorerJob({
+            _id: res.jobId,
+            type: "explorer",
+            config_id: job.config_id || configId,
+            payload: job.payload || {},
+            status: res.status || "queued",
+            created_at: new Date().toISOString(),
+            progress: { percent: 0, message: "En cola" },
+          });
+        }
         if (!firstNewJobId && res?.jobId) firstNewJobId = res.jobId;
       } catch (e) {
         setAlert({ type: "error", message: `No se pudo ejecutar ${jobId.slice(-8)}: ${String(e.message || e)}` });

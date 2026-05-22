@@ -3,6 +3,7 @@ import os
 import re
 import subprocess
 import threading
+import uuid
 from typing import Any, Dict, List, Optional
 
 from app.db import configs_col, job_logs_col, jobs_col
@@ -19,6 +20,13 @@ from app.utils import now_iso, oid, serialize_doc
 
 _proc_lock = threading.Lock()
 _processes: Dict[str, subprocess.Popen] = {}
+_memory_lock = threading.Lock()
+_memory_jobs: Dict[str, Dict[str, Any]] = {}
+_memory_logs: Dict[str, List[Dict[str, Any]]] = {}
+
+
+def _is_memory_job(job_id: str) -> bool:
+    return str(job_id).startswith("mem_")
 
 
 def _to_abs_path(path: str) -> str:
@@ -49,6 +57,18 @@ def _extract_file_path_from_line(line: str) -> Optional[str]:
 
 
 def _append_log(job_id: str, level: str, message: str) -> None:
+    if _is_memory_job(job_id):
+        with _memory_lock:
+            _memory_logs.setdefault(job_id, []).append(
+                {
+                    "job_id": job_id,
+                    "timestamp": now_iso(),
+                    "level": level,
+                    "message": message.rstrip("\n"),
+                }
+            )
+        return
+
     job_logs_col.insert_one(
         {
             "job_id": job_id,
@@ -60,7 +80,21 @@ def _append_log(job_id: str, level: str, message: str) -> None:
 
 
 def _update_job(job_id: str, updates: Dict[str, Any]) -> None:
+    if _is_memory_job(job_id):
+        with _memory_lock:
+            if job_id in _memory_jobs:
+                _memory_jobs[job_id].update(updates)
+        return
+
     jobs_col.update_one({"_id": oid(job_id)}, {"$set": updates})
+
+
+def _get_raw_job(job_id: str) -> Optional[Dict[str, Any]]:
+    if _is_memory_job(job_id):
+        with _memory_lock:
+            doc = _memory_jobs.get(job_id)
+            return dict(doc) if doc else None
+    return jobs_col.find_one({"_id": oid(job_id)})
 
 
 def _progress_from_line(job_type: str, payload: Dict[str, Any], line: str, counters: Dict[str, int]) -> Optional[Dict[str, Any]]:
@@ -101,16 +135,26 @@ def _progress_from_line(job_type: str, payload: Dict[str, Any], line: str, count
         return {"percent": percent, "message": f"Progreso {done}/{total}"}
 
     if job_type == "bulk_clone":
-        total = 200
-        if "| OK" in text and "ad OK" in text:
-            counters["done"] = counters.get("done", 0) + 1
+        copies = int(payload.get("copies", 4) or 4)
+        adsets_per_campaign = int(payload.get("adsetsPerCampaign", 50) or 50)
+        ads_per_adset = int(payload.get("adsPerAdset", 1) or 1)
+        total = max(1, max(1, copies) * max(1, adsets_per_campaign) * max(1, ads_per_adset))
+
         if "SKIP completo" in text:
+            counters["done"] = counters.get("done", 0) + max(1, ads_per_adset)
+        elif "| OK" in text and (" ad " in text and " OK" in text):
             counters["done"] = counters.get("done", 0) + 1
-        if "| GUARD" in text or "| ERROR" in text:
+        elif "ad recover OK" in text:
             counters["done"] = counters.get("done", 0) + 1
+        elif "| GUARD" in text and "ad " in text:
+            counters["done"] = counters.get("done", 0) + 1
+        elif "| ERROR" in text and "ad " in text:
+            counters["done"] = counters.get("done", 0) + 1
+        elif "| GUARD" in text or "| ERROR" in text:
+            counters["done"] = counters.get("done", 0) + max(1, ads_per_adset)
         done = counters.get("done", 0)
-        percent = min(99, int(done * 100 / total))
-        return {"percent": percent, "message": f"Progreso {done}/{total}"}
+        percent = min(99, max(1 if done > 0 else 0, int(done * 100 / total)))
+        return {"percent": percent, "message": f"Progreso {min(done, total)}/{total}", "done": min(done, total), "total": total}
 
     if job_type == "delete_campaigns":
         total = max(1, len(payload.get("campaignIds", [])))
@@ -173,7 +217,7 @@ def _run_job_thread(job_id: str, job_type: str, payload: Dict[str, Any], cmd: Li
                 progress = _progress_from_line(job_type, payload, line, counters)
                 if progress:
                     _update_job(job_id, {"progress": progress})
-                job = jobs_col.find_one({"_id": oid(job_id)}, {"cancel_requested": 1})
+                job = _get_raw_job(job_id)
                 if job and job.get("cancel_requested"):
                     cancelled = True
                     proc.terminate()
@@ -203,7 +247,7 @@ def _run_job_thread(job_id: str, job_type: str, payload: Dict[str, Any], cmd: Li
                 updates["result"] = result_payload
             _update_job(job_id, updates)
 
-            job_doc = jobs_col.find_one({"_id": oid(job_id)}, {"config_id": 1})
+            job_doc = _get_raw_job(job_id)
             config_id = job_doc.get("config_id") if job_doc else None
 
             if job_type == "explorer" and result_payload is not None and config_id:
@@ -293,8 +337,15 @@ def create_job(job_type: str, config_id: str, payload: Dict[str, Any], cmd: List
         "artifacts": artifacts or {},
         "progress": {"percent": 0, "message": "En cola"},
     }
-    res = jobs_col.insert_one(doc)
-    job_id = str(res.inserted_id)
+    if job_type == "explorer":
+        job_id = f"mem_{uuid.uuid4().hex}"
+        doc["_id"] = job_id
+        with _memory_lock:
+            _memory_jobs[job_id] = doc
+            _memory_logs[job_id] = []
+    else:
+        res = jobs_col.insert_one(doc)
+        job_id = str(res.inserted_id)
 
     thread = threading.Thread(target=_run_job_thread, args=(job_id, job_type, payload, cmd, artifacts or {}), daemon=True)
     thread.start()
@@ -303,11 +354,15 @@ def create_job(job_type: str, config_id: str, payload: Dict[str, Any], cmd: List
 
 
 def list_jobs(limit: int = 100) -> List[Dict[str, Any]]:
-    cur = jobs_col.find().sort("created_at", -1).limit(limit)
+    cur = jobs_col.find({"type": {"$ne": "explorer"}}).sort("created_at", -1).limit(limit)
     return [serialize_doc(d) for d in cur]
 
 
 def get_job(job_id: str) -> Optional[Dict[str, Any]]:
+    if _is_memory_job(job_id):
+        with _memory_lock:
+            doc = _memory_jobs.get(job_id)
+            return dict(doc) if doc else None
     doc = jobs_col.find_one({"_id": oid(job_id)})
     if doc is None:
         return None
@@ -315,12 +370,15 @@ def get_job(job_id: str) -> Optional[Dict[str, Any]]:
 
 
 def get_job_logs(job_id: str, limit: int = 5000) -> List[Dict[str, Any]]:
+    if _is_memory_job(job_id):
+        with _memory_lock:
+            return list(_memory_logs.get(job_id, []))[-limit:]
     cur = job_logs_col.find({"job_id": job_id}).sort("timestamp", 1).limit(limit)
     return [serialize_doc(d) for d in cur]
 
 
 def cancel_job(job_id: str) -> Dict[str, Any]:
-    jobs_col.update_one({"_id": oid(job_id)}, {"$set": {"cancel_requested": True}})
+    _update_job(job_id, {"cancel_requested": True})
     with _proc_lock:
         proc = _processes.get(job_id)
     if proc and proc.poll() is None:
@@ -330,7 +388,7 @@ def cancel_job(job_id: str) -> Dict[str, Any]:
 
 
 def delete_job(job_id: str) -> Dict[str, Any]:
-    job_doc = jobs_col.find_one({"_id": oid(job_id)})
+    job_doc = _get_raw_job(job_id)
 
     with _proc_lock:
         proc = _processes.get(job_id)
@@ -354,8 +412,13 @@ def delete_job(job_id: str) -> Dict[str, Any]:
         except Exception:
             pass
 
-    jobs_col.delete_one({"_id": oid(job_id)})
-    job_logs_col.delete_many({"job_id": job_id})
+    if _is_memory_job(job_id):
+        with _memory_lock:
+            _memory_jobs.pop(job_id, None)
+            _memory_logs.pop(job_id, None)
+    else:
+        jobs_col.delete_one({"_id": oid(job_id)})
+        job_logs_col.delete_many({"job_id": job_id})
     return {"jobId": job_id, "deleted": True}
 
 
@@ -449,7 +512,7 @@ def _rebuild_job_command(job_doc: Dict[str, Any]) -> tuple[List[str], Dict[str, 
 
 
 def rerun_job(job_id: str) -> Dict[str, Any]:
-    job_doc = jobs_col.find_one({"_id": oid(job_id)})
+    job_doc = _get_raw_job(job_id)
     if not job_doc:
         raise RuntimeError("Job not found")
 

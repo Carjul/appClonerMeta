@@ -76,7 +76,14 @@ export default function JobsPanel({
                 <td>{j.type}</td>
                 <td title={jobTarget(j)}>{jobTarget(j)}</td>
                 <td>{j.status}</td>
-                <td>{j.progress ? `${j.progress.percent}% - ${j.progress.message}` : "-"}</td>
+                <td>
+                  {j.progress ? (
+                    <div className="job-progress-wrap">
+                      <div className="job-progress-label">{j.progress.percent}% - {j.progress.message}</div>
+                      <div className="job-progress-track"><div className="job-progress-fill" style={{ width: `${Math.min(100, Math.max(0, j.progress.percent || 0))}%` }} /></div>
+                    </div>
+                  ) : "-"}
+                </td>
                 <td className="row-actions">
                   <button className="btn btn-primary" onClick={() => onOpenLogs(j._id)}>Ver estado</button>
                   {(j.status === "queued" || j.status === "running") ? <button className="btn btn-danger" onClick={() => onCancelJob(j._id)}>Cancelar</button> : null}
