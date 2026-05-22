@@ -7,6 +7,7 @@ import RulesEnginePage from "./pages/RulesEnginePage";
 
 export default function App() {
   const [tab, setTab] = useState("campaigns");
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const title = useMemo(() => {
     if (tab === "configs") return "Configuración";
@@ -16,6 +17,19 @@ export default function App() {
     return "Campañas";
   }, [tab]);
 
+  const navItems = [
+    { id: "campaigns", label: "Clonar Campañas", icon: "📣", action: () => setTab("campaigns") },
+    { id: "configs", label: "Configuración", icon: "⚙️", action: () => setTab("configs") },
+    { id: "fbCatalog", label: "Crear Campañas", icon: "▣", action: () => { location.href = "/dashboard"; } },
+    { id: "daily", label: "Dashboard", icon: "📊", action: () => setTab("daily") },
+    { id: "rules", label: "Rules", icon: "🧠", action: () => setTab("rules") },
+  ];
+
+  function selectNav(item) {
+    item.action();
+    setMenuOpen(false);
+  }
+
   return (
     <div className="app">
       <header className="topbar">
@@ -23,27 +37,20 @@ export default function App() {
           <img className="brand-icon" src="/favicon.svg" alt="Meta Clonación" />
           <span>Meta Tool</span>
         </h1>
-        <div className="tabs">
-          <button className={`nav-tab ${tab === "campaigns" ? "active" : ""}`} onClick={() => setTab("campaigns")}>
-            <span className="nav-icon" aria-hidden="true">📣</span>
-            <span>Clonar Campañas</span>
+        <div className="hamburger-nav">
+          <button className={`hamburger-btn ${menuOpen ? "active" : ""}`} onClick={() => setMenuOpen((open) => !open)} aria-label="Abrir menú" aria-expanded={menuOpen}>
+            <span />
+            <span />
+            <span />
           </button>
-          <button className={`nav-tab ${tab === "configs" ? "active" : ""}`} onClick={() => setTab("configs")}>
-            <span className="nav-icon" aria-hidden="true">⚙️</span>
-            <span>Configuración</span>
-          </button>
-          <button className={`nav-tab ${tab === "fbCatalog" ? "active" : ""}`} onClick={() => location.href = "/dashboard"}>
-            <span className="nav-icon" aria-hidden="true">▣</span>
-            <span>Crear Campañas</span>
-          </button>
-          <button className={`nav-tab ${tab === "daily" ? "active" : ""}`} onClick={() => setTab("daily")}>
-            <span className="nav-icon" aria-hidden="true">📊</span>
-            <span>Dashboard</span>
-          </button>
-          <button className={`nav-tab ${tab === "rules" ? "active" : ""}`} onClick={() => setTab("rules")}>
-            <span className="nav-icon" aria-hidden="true">🧠</span>
-            <span>Rules</span>
-          </button>
+          {menuOpen && <div className="tabs hamburger-menu">
+            {navItems.map((item) => (
+              <button key={item.id} className={`nav-tab ${tab === item.id ? "active" : ""}`} onClick={() => selectNav(item)}>
+                <span className="nav-icon" aria-hidden="true">{item.icon}</span>
+                <span>{item.label}</span>
+              </button>
+            ))}
+          </div>}
         </div>
       </header>
       <main className="content">
