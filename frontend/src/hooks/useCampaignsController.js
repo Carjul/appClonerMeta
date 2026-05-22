@@ -6,7 +6,9 @@ const EXPLORER_JOBS_KEY = "explorerJobs";
 
 function readExplorerJobs() {
   try {
-    return JSON.parse(localStorage.getItem(EXPLORER_JOBS_KEY) || "[]");
+    const raw = JSON.parse(localStorage.getItem(EXPLORER_JOBS_KEY) || "[]");
+    // Purgar entradas sin _id válido (puede quedar de una sesión anterior con el bug)
+    return raw.filter((job) => job && job._id);
   } catch {
     return [];
   }
@@ -215,7 +217,8 @@ export default function useCampaignsController() {
         clearInterval(timer);
         return;
       }
-      upsertExplorerJob(r);
+      // Asegurar que el objeto siempre tenga _id antes de guardarlo en localStorage
+      upsertExplorerJob({ ...r, _id: explorerJobId });
       await loadJobs();
       if (r.status === "completed") {
         setAccounts((r.result && r.result.accounts) || []);

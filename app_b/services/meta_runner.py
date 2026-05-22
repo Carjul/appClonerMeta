@@ -5,7 +5,8 @@ from typing import Dict, List, Tuple
 from app_b.config import PYTHON_BIN
 
 
-ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+# app_b/services/ → app_b/ → app/  (raíz del proyecto)
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 ARTIFACTS_DIR = os.path.join(ROOT_DIR, "logs", "artifacts")
 os.makedirs(ARTIFACTS_DIR, exist_ok=True)
 

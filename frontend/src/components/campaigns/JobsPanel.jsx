@@ -72,7 +72,7 @@ export default function JobsPanel({
                 <td>
                   <input type="checkbox" className="checkbox checkbox-info" checked={!!selectedJobs[j._id]} onChange={(e) => onToggleJobSelection(j._id, e.target.checked)} />
                 </td>
-                <td>{j._id.slice(-8)}</td>
+                <td>{(j._id || "").slice(-8)}</td>
                 <td>{j.type}</td>
                 <td title={jobTarget(j)}>{jobTarget(j)}</td>
                 <td>{j.status}</td>
