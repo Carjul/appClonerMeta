@@ -32,7 +32,7 @@ export default function App() {
             <span className="nav-icon" aria-hidden="true">⚙️</span>
             <span>Configuración</span>
           </button>
-          <button className={`nav-tab ${tab === "fbCatalog" ? "active" : ""}`} onClick={() => setTab("fbCatalog")}>
+          <button className={`nav-tab ${tab === "fbCatalog" ? "active" : ""}`} onClick={() => location.href = "/dashboard"}>
             <span className="nav-icon" aria-hidden="true">▣</span>
             <span>Crear Campañas</span>
           </button>

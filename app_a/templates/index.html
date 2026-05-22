@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Inicio{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Meta Automation Platform</h1>
+  <p>Gestión centralizada de campañas, catálogos y reportes de Meta Ads.</p>
+  <div class="hero-actions">
+    <a href="/dashboard/campaigns" class="btn btn-primary">Ver Campañas</a>
+    <a href="{{ dashboard_url }}" class="btn btn-secondary">
+      Abrir Dashboard Catálogos →
+    </a>
+  </div>
+</section>
+{% endblock %}

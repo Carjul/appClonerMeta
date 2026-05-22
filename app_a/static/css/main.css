@@ -1,0 +1,77 @@
+/* app_a/static/css/main.css
+   Estilos base de App A (Jinja2)
+   Personaliza según tu diseño. */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #f8fafc;
+  color: #1e293b;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Nav ── */
+.main-nav {
+  background: #1e293b;
+  color: #fff;
+  padding: .75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+.nav-brand a { color: #fff; text-decoration: none; font-weight: 700; font-size: 1.1rem; }
+.nav-links { list-style: none; display: flex; gap: .5rem; align-items: center; }
+.nav-links a {
+  color: #cbd5e1;
+  text-decoration: none;
+  padding: .4rem .75rem;
+  border-radius: 6px;
+  font-size: .9rem;
+  transition: background .15s;
+}
+.nav-links a:hover { background: #334155; color: #fff; }
+.nav-separator { width: 1px; height: 1.5rem; background: #475569; margin: 0 .25rem; }
+.nav-cta {
+  background: #3b82f6 !important;
+  color: #fff !important;
+  font-weight: 600;
+}
+.nav-cta:hover { background: #2563eb !important; }
+
+/* ── Layout ── */
+.main-content { flex: 1; padding: 2rem 1.5rem; max-width: 1200px; width: 100%; margin: 0 auto; }
+.main-footer { background: #1e293b; color: #94a3b8; text-align: center; padding: 1rem; font-size: .85rem; }
+.main-footer a { color: #60a5fa; }
+
+/* ── Hero ── */
+.hero { padding: 3rem 0 2rem; }
+.hero h1 { font-size: 2rem; font-weight: 700; margin-bottom: .75rem; }
+.hero p  { color: #64748b; font-size: 1.1rem; margin-bottom: 1.5rem; }
+.hero-actions { display: flex; gap: 1rem; flex-wrap: wrap; }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex; align-items: center;
+  padding: .6rem 1.25rem;
+  border-radius: 8px;
+  font-size: .95rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: opacity .15s;
+}
+.btn:hover { opacity: .85; }
+.btn-primary  { background: #3b82f6; color: #fff; }
+.btn-secondary { background: #e2e8f0; color: #1e293b; }
+
+/* ── Cards ── */
+.quick-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; margin-top: 2rem; }
+.stat-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1.25rem; }
+.stat-card h3 { font-size: .85rem; color: #64748b; margin-bottom: .5rem; text-transform: uppercase; letter-spacing: .04em; }
+.stat-number { font-size: 1.75rem; font-weight: 700; }
+
+/* ── Page ── */
+.page-header { padding: 1.5rem 0 1rem; border-bottom: 1px solid #e2e8f0; margin-bottom: 1.5rem; }
+.page-header h1 { font-size: 1.6rem; }

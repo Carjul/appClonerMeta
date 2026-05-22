@@ -1,7 +1,8 @@
-const API_BASE = (import.meta.env.VITE_API_BASE || window.location.origin).replace(/\/$/, "");
-
+// URLs relativas: la SPA llama siempre al mismo servidor que la sirve.
+// No depende de VITE_API_BASE ni del puerto — funciona en dev (proxy Vite)
+// y en producción (FastAPI sirve todo desde el mismo origen).
 async function req(path, options = {}) {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(path, {
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",

@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, tip %}
+{% block content %}
+<h1 class="text-3xl font-bold mb-2 flex items-center gap-3">{{ icon('edit') }}Editar paquete de copy</h1>
+<p class="text-sm text-muted mb-6">Edita el copy real y las carnadas seleccionadas.</p>
+
+<form method="post" action="/dashboard/copies/{{ item.id }}/edit" class="bg-panel border border-border rounded-lg p-6 space-y-6 max-w-4xl">
+  <input type="hidden" name="carnada_order" id="carnada_order" value="{{ selected_ids|join(',') }}">
+
+  <div>
+    <label class="block text-sm font-medium mb-1">Nombre del paquete</label>
+    <input spellcheck="false" name="name" value="{{ item.name }}" required
+           class="w-full bg-bg border border-border rounded px-3 py-2">
+  </div>
+
+  <div class="bg-bg border border-border rounded-lg p-4 space-y-4">
+    <h3 class="font-semibold flex items-center gap-2 text-accent">
+      {{ icon('target') }}Copy REAL (lo que verán los usuarios target)
+    </h3>
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-sm mb-1">Idioma del usuario target</label>
+        <select name="target_locale_id" required class="w-full bg-bg border border-border rounded px-3 py-2 text-sm">
+          {% for lid, code, label in locales %}
+            <option value="{{ lid }}" {% if lid == item.target_locale_id %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm mb-1">URL real</label>
+        <input spellcheck="false" name="real_url" value="{{ item.real_url }}" required
+               class="w-full bg-bg border border-border rounded px-3 py-2 text-sm">
+      </div>
+    </div>
+    <div>
+      <label class="block text-sm mb-1">Body</label>
+      <textarea spellcheck="false" name="real_body" rows="3" required
+                class="w-full bg-bg border border-border rounded px-3 py-2">{{ item.real_body }}</textarea>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-sm mb-1">Title</label>
+        <input spellcheck="false" name="real_title" value="{{ item.real_title }}" required
+               class="w-full bg-bg border border-border rounded px-3 py-2">
+      </div>
+      <div>
+        <label class="block text-sm mb-1">Description</label>
+        <input spellcheck="false" name="real_desc" value="{{ item.real_desc or '' }}"
+               class="w-full bg-bg border border-border rounded px-3 py-2">
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-bg border border-border rounded-lg p-4 space-y-3">
+    <h3 class="font-semibold flex items-center gap-2 text-purple-300">
+      {{ icon('shield') }}Carnadas (lo que ve el reviewer)
+      {{ tip("El número indica el orden en que el reviewer las verá. El creativo REAL se inserta automáticamente en el MEDIO del paquete.") }}
+    </h3>
+
+    {% if carnadas %}
+    <p class="text-xs text-muted">Marca los idiomas a incluir:</p>
+    <div class="grid grid-cols-2 gap-2">
+      {% for c in carnadas %}
+      <label class="flex items-start gap-2 p-3 bg-panel border border-border rounded cursor-pointer hover:border-accent overflow-hidden">
+        <input type="checkbox" name="carnada_ids" value="{{ c.id }}" class="mt-1 w-4 h-4 flex-shrink-0"
+               {% if c.id in selected_ids %}checked{% endif %}>
+        <div class="flex-1 min-w-0 text-sm">
+          <div class="font-medium flex items-center gap-2 mb-1">
+            <span class="carnada-order hidden inline-flex items-center justify-center w-5 h-5 rounded-full bg-accent text-white text-xs font-bold flex-shrink-0"></span>
+            <span class="truncate">{{ c.language_name }}</span>
+          </div>
+          <div class="text-xs text-muted truncate" title="{{ c.title }}"><span class="opacity-70">Título:</span> {{ c.title }}</div>
+          <div class="text-xs text-muted truncate" title="{{ c.body }}"><span class="opacity-70">Body:</span> {{ c.body[:60] }}{% if c.body|length > 60 %}…{% endif %}</div>
+        </div>
+      </label>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-sm text-muted">Sin carnadas. <a href="/dashboard/carnadas" class="text-accent">Crea una →</a></div>
+    {% endif %}
+  </div>
+
+  <div class="flex gap-2">
+    <button class="bg-accent hover:bg-accent/80 text-white px-5 py-2 rounded font-medium">Guardar cambios</button>
+    <a href="/dashboard/copies" class="bg-bg border border-border hover:border-accent px-5 py-2 rounded">Cancelar</a>
+  </div>
+</form>
+
+<script>
+(function() {
+  const form = document.querySelector('form[action^="/copies/"]');
+  if (!form) return;
+  // Inicializar con el orden guardado
+  const initial = (document.getElementById('carnada_order').value || '').split(',').filter(Boolean);
+  const order = [...initial];
+
+  function refresh() {
+    form.querySelectorAll('input[name="carnada_ids"]').forEach(cb => {
+      const badge = cb.closest('label').querySelector('.carnada-order');
+      const idx = order.indexOf(cb.value);
+      if (cb.checked && idx >= 0) {
+        badge.textContent = (idx + 1);
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    });
+  }
+  form.querySelectorAll('input[name="carnada_ids"]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      if (cb.checked) {
+        if (!order.includes(cb.value)) order.push(cb.value);
+      } else {
+        const i = order.indexOf(cb.value);
+        if (i >= 0) order.splice(i, 1);
+      }
+      refresh();
+      document.getElementById('carnada_order').value = order.join(',');
+    });
+  });
+  refresh();
+})();
+</script>
+{% endblock %}
