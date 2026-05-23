@@ -124,23 +124,19 @@ def create_normal_multi_ad(
 
     # 4. Por cada ad → creative + ad
     for idx, a in enumerate(ads, start=1):
-        common_data = {
+        link_data = {
+            "link": a["link"],
             "message": a["body"],
             "name": a["title"],
             "call_to_action": {"type": a.get("cta_type", "LEARN_MORE"), "value": {"link": a["link"]}},
         }
         if a.get("description"):
-            common_data["description"] = a["description"]
+            link_data["description"] = a["description"]
 
         if a["is_video"]:
-            # For video_data, Meta can reject creatives when both `link` and
-            # `call_to_action.value.link` are present as multiple link URLs.
-            video_data = dict(common_data)
-            video_data["video_id"] = a["meta_id"]
-            object_story_spec = {"page_id": page_id, "video_data": video_data}
+            link_data["video_id"] = a["meta_id"]
+            object_story_spec = {"page_id": page_id, "video_data": link_data}
         else:
-            link_data = dict(common_data)
-            link_data["link"] = a["link"]
             link_data["image_hash"] = a["meta_id"]
             object_story_spec = {"page_id": page_id, "link_data": link_data}
 

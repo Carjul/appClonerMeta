@@ -167,7 +167,6 @@ def build_asset_feed_spec(real_media_id: str, default_media_id: str, is_video: b
 
     bodies, titles, descs, links = [], [], [], []
     rules = []
-    groups = []
     for i, c in enumerate(carnadas):
         if i == mid:
             # Real va aquí en el medio
@@ -175,17 +174,13 @@ def build_asset_feed_spec(real_media_id: str, default_media_id: str, is_video: b
             titles.append({"adlabels": [{"name": rl}], "text": real_title})
             descs .append({"adlabels": [{"name": rl}], "text": real_desc})
             links .append({"adlabels": [{"name": rl}], "website_url": real_url, "display_url": _domain(real_url)})
-            group = {
+            rules.append({
+                "customization_spec": {"age_max": 65, "age_min": 13, "locales": rule_locales},
                 label_key: {"name": rl},
                 "body_label": {"name": rl},
                 "description_label": {"name": rl},
                 "link_url_label": {"name": rl},
                 "title_label": {"name": rl},
-            }
-            groups.append(group)
-            rules.append({
-                "customization_spec": {"age_max": 65, "age_min": 13, "locales": rule_locales},
-                **group,
                 "is_default": False,
             })
         lbl = c["locale_code"]
@@ -193,17 +188,13 @@ def build_asset_feed_spec(real_media_id: str, default_media_id: str, is_video: b
         titles.append({"adlabels": [{"name": lbl}], "text": c["title"]})
         descs .append({"adlabels": [{"name": lbl}], "text": c.get("desc", "")})
         links .append({"adlabels": [{"name": lbl}], "website_url": c["url"], "display_url": _domain(c["url"])})
-        group = {
+        rules.append({
+            "customization_spec": {"age_max": 65, "age_min": 13, "locales": [c["locale_id"]]},
             label_key: {"name": default_label},
             "body_label": {"name": lbl},
             "description_label": {"name": lbl},
             "link_url_label": {"name": lbl},
             "title_label": {"name": lbl},
-        }
-        groups.append(group)
-        rules.append({
-            "customization_spec": {"age_max": 65, "age_min": 13, "locales": [c["locale_id"]]},
-            **group,
             "is_default": (i == 0),  # primera carnada = default del reviewer
         })
     # Caso edge: si mid == len(carnadas) (1 sola carnada), el real va al final
@@ -212,15 +203,11 @@ def build_asset_feed_spec(real_media_id: str, default_media_id: str, is_video: b
         titles.append({"adlabels": [{"name": rl}], "text": real_title})
         descs .append({"adlabels": [{"name": rl}], "text": real_desc})
         links .append({"adlabels": [{"name": rl}], "website_url": real_url, "display_url": _domain(real_url)})
-        group = {
-            label_key: {"name": rl}, "body_label": {"name": rl},
-            "description_label": {"name": rl}, "link_url_label": {"name": rl},
-            "title_label": {"name": rl},
-        }
-        groups.append(group)
         rules.append({
             "customization_spec": {"age_max": 65, "age_min": 13, "locales": rule_locales},
-            **group, "is_default": False,
+            label_key: {"name": rl}, "body_label": {"name": rl},
+            "description_label": {"name": rl}, "link_url_label": {"name": rl},
+            "title_label": {"name": rl}, "is_default": False,
         })
 
     spec = {
@@ -233,10 +220,6 @@ def build_asset_feed_spec(real_media_id: str, default_media_id: str, is_video: b
         "ad_formats": [ad_format],
         "optimization_type": "LANGUAGE",
         "asset_customization_rules": rules,
-        # Meta still validates multiple link_urls against group rules in some
-        # accounts/API versions, even when asset_customization_rules are present.
-        # Keep groups in sync with rules so every link_url_label is grouped.
-        "groups": groups,
     }
     return json.dumps(spec)
 

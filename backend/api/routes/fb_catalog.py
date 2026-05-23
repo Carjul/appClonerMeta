@@ -504,7 +504,7 @@ def _asset_feed_spec(real_media_id: str, default_media_id: str, is_video: bool, 
     id_key = "video_id" if is_video else "hash"
     label_key = "video_label" if is_video else "image_label"
     media_block = [{"adlabels": [{"name": real_label}], id_key: real_media_id}, {"adlabels": [{"name": default_label}], id_key: default_media_id}]
-    bodies, titles, descs, links, rules, groups = [], [], [], [], [], []
+    bodies, titles, descs, links, rules = [], [], [], [], []
     mid = len(carnadas) // 2
     for index, carnada in enumerate(carnadas):
         if index == mid:
@@ -512,18 +512,14 @@ def _asset_feed_spec(real_media_id: str, default_media_id: str, is_video: bool, 
             titles.append({"adlabels": [{"name": real_label}], "text": bundle.get("real_title", "")})
             descs.append({"adlabels": [{"name": real_label}], "text": bundle.get("real_desc", "")})
             links.append({"adlabels": [{"name": real_label}], "website_url": bundle.get("real_url", ""), "display_url": _domain(bundle.get("real_url", ""))})
-            group = {label_key: {"name": real_label}, "body_label": {"name": real_label}, "description_label": {"name": real_label}, "link_url_label": {"name": real_label}, "title_label": {"name": real_label}}
-            groups.append(group)
-            rules.append({"customization_spec": {"age_max": 65, "age_min": 13, "locales": locale_ids or [bundle.get("target_locale_id") or 6]}, **group, "is_default": False})
+            rules.append({"customization_spec": {"age_max": 65, "age_min": 13, "locales": locale_ids or [bundle.get("target_locale_id") or 6]}, label_key: {"name": real_label}, "body_label": {"name": real_label}, "description_label": {"name": real_label}, "link_url_label": {"name": real_label}, "title_label": {"name": real_label}, "is_default": False})
         label = carnada["locale_code"]
         bodies.append({"adlabels": [{"name": label}], "text": carnada.get("body", "")})
         titles.append({"adlabels": [{"name": label}], "text": carnada.get("title", "")})
         descs.append({"adlabels": [{"name": label}], "text": carnada.get("description", "")})
         links.append({"adlabels": [{"name": label}], "website_url": carnada.get("url", ""), "display_url": _domain(carnada.get("url", ""))})
-        group = {label_key: {"name": default_label}, "body_label": {"name": label}, "description_label": {"name": label}, "link_url_label": {"name": label}, "title_label": {"name": label}}
-        groups.append(group)
-        rules.append({"customization_spec": {"age_max": 65, "age_min": 13, "locales": [carnada.get("locale_id")]}, **group, "is_default": index == 0})
-    return json.dumps({media_key: media_block, "bodies": bodies, "titles": titles, "descriptions": descs, "link_urls": links, "call_to_action_types": [cta_type], "ad_formats": ["SINGLE_VIDEO" if is_video else "SINGLE_IMAGE"], "optimization_type": "LANGUAGE", "asset_customization_rules": rules, "groups": groups})
+        rules.append({"customization_spec": {"age_max": 65, "age_min": 13, "locales": [carnada.get("locale_id")]}, label_key: {"name": default_label}, "body_label": {"name": label}, "description_label": {"name": label}, "link_url_label": {"name": label}, "title_label": {"name": label}, "is_default": index == 0})
+    return json.dumps({media_key: media_block, "bodies": bodies, "titles": titles, "descriptions": descs, "link_urls": links, "call_to_action_types": [cta_type], "ad_formats": ["SINGLE_VIDEO" if is_video else "SINGLE_IMAGE"], "optimization_type": "LANGUAGE", "asset_customization_rules": rules})
 
 
 @router.get("/summary")
@@ -1014,16 +1010,13 @@ def create_normal_campaign(payload: NormalCampaignPayload):
         if not media.get("uploaded_to_meta") or not media.get("meta_id"):
             errors.append(f"Ad #{index}: creativo '{media.get('name')}' no esta subido a Meta")
             continue
-        common_data = {"message": ad.body, "name": ad.title, "call_to_action": {"type": ad.ctaType, "value": {"link": ad.link}}}
+        link_data = {"link": ad.link, "message": ad.body, "name": ad.title, "call_to_action": {"type": ad.ctaType, "value": {"link": ad.link}}}
         if ad.description:
-            common_data["description"] = ad.description
+            link_data["description"] = ad.description
         if media.get("type") == "video":
-            video_data = dict(common_data)
-            video_data["video_id"] = media["meta_id"]
-            story_spec = {"page_id": page_id, "video_data": video_data}
+            link_data["video_id"] = media["meta_id"]
+            story_spec = {"page_id": page_id, "video_data": link_data}
         else:
-            link_data = dict(common_data)
-            link_data["link"] = ad.link
             link_data["image_hash"] = media["meta_id"]
             story_spec = {"page_id": page_id, "link_data": link_data}
         if ig_id:
