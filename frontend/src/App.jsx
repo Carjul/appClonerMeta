@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import ConfigurationPage from "./pages/ConfigurationPage";
 import CampaignsPage from "./pages/CampaignsPage";
 import DailyReportPage from "./pages/DailyReportPage";
@@ -8,6 +8,14 @@ import RulesEnginePage from "./pages/RulesEnginePage";
 export default function App() {
   const [tab, setTab] = useState("campaigns");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [authUser, setAuthUser] = useState(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me", { headers: { Accept: "application/json" } })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setAuthUser(data?.user || null))
+      .catch(() => setAuthUser(null));
+  }, []);
 
   const title = useMemo(() => {
     if (tab === "configs") return "Configuración";
@@ -21,7 +29,7 @@ export default function App() {
     { id: "campaigns", label: "Clonar Campañas", icon: "📣", action: () => setTab("campaigns") },
     { id: "configs", label: "Configuración", icon: "⚙️", action: () => setTab("configs") },
     { id: "fbCatalog", label: "Crear Campañas", icon: "▣", action: () => { location.href = "/dashboard"; } },
-    { id: "daily", label: "Dashboard", icon: "📊", action: () => setTab("daily") },
+    { id: "daily", label: "Dashboard", icon: "📊", action: () => {location.href = "/metricas";} },
     { id: "rules", label: "Rules", icon: "🧠", action: () => setTab("rules") },
   ];
 
@@ -37,6 +45,10 @@ export default function App() {
           <img className="brand-icon" src="/favicon.svg" alt="Meta Clonación" />
           <span>Meta Tool</span>
         </h1>
+        <div className="topbar-user" style={{ marginLeft: "10px", display: "flex", alignItems: "center", gap: 10, fontSize: 12 }}>
+          {authUser ? <span style={{ color: "#9ca3af" }}>{authUser.name} · {authUser.role}</span> : null}
+          <a href="/logout" style={{ color: "#fff", background: "#ef4444", padding: "7px 10px", borderRadius: 8, textDecoration: "none", fontWeight: 700 }}>Salir</a>
+        </div>
         <div className="hamburger-nav">
           <button className={`hamburger-btn ${menuOpen ? "active" : ""}`} onClick={() => setMenuOpen((open) => !open)} aria-label="Abrir menú" aria-expanded={menuOpen}>
             <span />

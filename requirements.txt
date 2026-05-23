@@ -8,6 +8,7 @@ uvicorn[standard]>=0.30.0
 # ── Plantillas Jinja2 (App A) ───────────────────────────────────
 jinja2>=3.1.0
 python-multipart>=0.0.9
+flask>=3.0.0
 
 # ── Configuración unificada (Pydantic v2) ───────────────────────
 pydantic>=2.0.0

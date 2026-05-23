@@ -11,7 +11,7 @@
  *     En desarrollo (npm run dev), las peticiones /api/* y /feed/*
  *     se reenvían a FastAPI en :8000 → no hay errores CORS en dev.
  *
- *  3. build.outDir → "../app_b/static"
+ *  3. build.outDir → "../backend/api/static"
  *     El build se genera directamente en el directorio que sirve FastAPI.
  *     Ejecutar: cd frontend && npm run build
  */
@@ -42,9 +42,9 @@ export default defineConfig({
 
   // ── Build ────────────────────────────────────────────────────
   build: {
-    // Genera el build directamente en app_b/static/
-    // (donde FastAPI lo sirve bajo /dashboard)
-    outDir: "../app_b/static",
+    // Genera el build directamente en backend/api/static/
+    // (donde FastAPI lo sirve como SPA raíz)
+    outDir: "../backend/api/static",
     emptyOutDir: true,
   },
 });
