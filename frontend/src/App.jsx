@@ -45,11 +45,12 @@ export default function App() {
           <img className="brand-icon" src="/favicon.svg" alt="Meta Clonación" />
           <span>Meta Tool</span>
         </h1>
-        <div className="topbar-user" style={{ marginLeft: "10px", display: "flex", alignItems: "center", gap: 10, fontSize: 12 }}>
-          {authUser ? <span style={{ color: "#9ca3af" }}>{authUser.name} · {authUser.role}</span> : null}
-          <a href="/logout" style={{ color: "#fff", background: "#ef4444", padding: "7px 10px", borderRadius: 8, textDecoration: "none", fontWeight: 700 }}>Salir</a>
-        </div>
-        <div className="hamburger-nav">
+        <div className="topbar-actions">
+          <div className="topbar-user">
+            {authUser ? <span className="topbar-user-name">{authUser.name} · {authUser.role}</span> : null}
+            <a href="/logout" className="topbar-logout">Salir</a>
+          </div>
+          <div className="hamburger-nav">
           <button className={`hamburger-btn ${menuOpen ? "active" : ""}`} onClick={() => setMenuOpen((open) => !open)} aria-label="Abrir menú" aria-expanded={menuOpen}>
             <span />
             <span />
@@ -63,10 +64,10 @@ export default function App() {
               </button>
             ))}
           </div>}
+          </div>
         </div>
       </header>
       <main className="content">
-{/*         <h2>{title}</h2> */}
         {tab === "configs" ? <ConfigurationPage /> : tab === "fbCatalog" ? <FbCatalogModule /> : tab === "daily" ? <DailyReportPage /> : tab === "rules" ? <RulesEnginePage /> : <CampaignsPage />}
       </main>
     </div>

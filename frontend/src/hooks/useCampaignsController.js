@@ -204,6 +204,19 @@ export default function useCampaignsController() {
       setStatusWatch(nextWatch);
     }
   }, [jobs, statusWatch]);
+  
+  useEffect(() => {
+    if (!selectedJobId || !jobs.length) return;
+
+    const job = jobs.find((item) => item._id === selectedJobId);
+    if (!job) return;
+
+    if (["completed", "failed", "cancelled"].includes(job.status)) {
+      const rows = JSON.parse(localStorage.getItem("explorerJobs") || "[]");
+      const next = rows.filter((item) => item.type == "explorer" && item.status !== "running");
+      localStorage.setItem("explorerJobs", JSON.stringify(next));
+    }
+  }, [jobs, selectedJobId]);
 
   useEffect(() => {
     if (!explorerJobId) return;

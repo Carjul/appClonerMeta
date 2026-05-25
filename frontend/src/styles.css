@@ -33,6 +33,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
 }
 
 .topbar h1 {
@@ -53,6 +54,39 @@ body {
   width: 20px;
   height: 20px;
   display: inline-block;
+}
+
+.topbar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.topbar-user-name {
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.topbar-logout {
+  color: #fff;
+  background: #ef4444;
+  padding: 7px 10px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.topbar-logout:hover {
+  background: #dc2626;
 }
 
 .hamburger-nav {
@@ -2083,9 +2117,26 @@ th {
     flex-direction: row;
     align-items: center;
     gap: 10px;
+    padding: 12px;
   }
 
+  .topbar-actions {
+    margin-left: auto;
+    gap: 8px;
+  }
 
+  .topbar-user {
+    gap: 8px;
+  }
+
+  .topbar-user-name {
+    display: none;
+  }
+
+  .topbar-logout {
+    padding: 7px 9px;
+    font-size: 12px;
+  }
 
   .tabs {
     width: 100%;
