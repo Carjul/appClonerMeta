@@ -862,7 +862,7 @@ body.show-delete .delete-btn{display:flex}
       <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
       <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
     </svg>
-    Meta Ads Report
+    <a href="/" style="color:white; text-decoration:none;">Meta Ads Report</a>
   </h1>
   <div class="hdr-r">
     <div class="status" id="status">
