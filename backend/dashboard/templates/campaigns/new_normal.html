@@ -4,6 +4,18 @@
 <h1 class="text-3xl font-bold mb-2 flex items-center gap-3">{{ icon('circle') }}Nueva campaña Normal</h1>
 <p class="text-sm text-muted mb-6">Sin truco. Estructura: <strong>1 campaña → 1 ad set → N anuncios</strong>. Cada anuncio lleva 1 creativo + texto libre.</p>
 
+{% if error %}
+<div class="bg-err/10 border border-err rounded p-3 mb-4 text-sm text-err">
+  <div class="font-semibold mb-1">No se pudo crear la campaña</div>
+  <div>{{ error }}</div>
+  {% if error_details %}
+  <ul class="mt-2 list-disc pl-5 space-y-1">
+    {% for detail in error_details %}<li>{{ detail }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+</div>
+{% endif %}
+
 <form method="post" action="/dashboard/campaigns/new-normal" class="space-y-6 max-w-5xl">
 
   <!-- ===================== CAMPAÑA ===================== -->

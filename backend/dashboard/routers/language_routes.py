@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 
 import requests
 from fastapi import APIRouter, Depends, Request, Form, HTTPException
-from fastapi.responses import RedirectResponse, JSONResponse
+from fastapi.responses import RedirectResponse
 from typing import Any as Session
 
 from ..database import get_db
@@ -47,6 +47,117 @@ def _save_created_campaign(db: Session, *, name: str, ad_account_id: str, campai
     db.add(campaign)
     db.commit()
     return campaign
+
+
+def _format_campaign_errors(result: dict | None = None, fallback: str | None = None):
+    errors = [str(err) for err in (result or {}).get("errors", []) if str(err).strip()]
+    if not errors and fallback:
+        errors = [fallback]
+    message = errors[0] if errors else (fallback or "No se pudo crear la campaña.")
+
+    created_bits = []
+    if result and result.get("campaign_id"):
+        created_bits.append(f"campaign_id: {result['campaign_id']}")
+    if result and result.get("adset_id"):
+        created_bits.append(f"adset_id: {result['adset_id']}")
+    if created_bits:
+        message = f"{message} ({', '.join(created_bits)})"
+    return message, errors
+
+
+def _load_campaign_wizard_common(db: Session):
+    from .. import meta_api
+    from ..models import AppSettings
+
+    settings = db.query(AppSettings).first()
+    if not settings:
+        settings = AppSettings()
+        db.add(settings)
+        db.commit()
+    defaults = get_effective_defaults(db)
+    for key, value in defaults.items():
+        setattr(settings, f"default_{key}", value)
+
+    accounts, pages, pixels = [], [], []
+    try:
+        token = get_active_token(db)
+        accounts = meta_api.list_ad_accounts(token=token)
+        pages = meta_api.list_pages(token=token)
+        if settings and settings.default_ad_account_id:
+            try:
+                pixels = meta_api.list_pixels(settings.default_ad_account_id, token=token)
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    bid_strategies = [
+        ("LOWEST_COST_WITHOUT_CAP", "Volumen más alto"),
+        ("COST_CAP", "Objetivo de costo por resultado"),
+        ("LOWEST_COST_WITH_MIN_ROAS", "Objetivo de ROAS"),
+        ("LOWEST_COST_WITH_BID_CAP", "Límite de puja"),
+    ]
+    objectives = [
+        ("OUTCOME_SALES", "Ventas"),
+        ("OUTCOME_LEADS", "Leads"),
+        ("OUTCOME_TRAFFIC", "Tráfico"),
+        ("OUTCOME_AWARENESS", "Reconocimiento"),
+        ("OUTCOME_ENGAGEMENT", "Interacción"),
+    ]
+    event_types = [
+        ("PURCHASE", "Compra"),
+        ("INITIATE_CHECKOUT", "Inicio de checkout"),
+        ("ADD_TO_CART", "Añadir al carrito"),
+        ("LEAD", "Lead"),
+        ("COMPLETE_REGISTRATION", "Registro completo"),
+        ("VIEW_CONTENT", "Vista de contenido"),
+    ]
+    ctas = ["LEARN_MORE", "SHOP_NOW", "SIGN_UP", "SUBSCRIBE", "GET_OFFER", "APPLY_NOW", "DOWNLOAD", "CONTACT_US"]
+    return settings, accounts, pages, pixels, bid_strategies, objectives, event_types, ctas
+
+
+def _render_language_wizard(request: Request, db: Session, *, error: str | None = None, error_details: list[str] | None = None, status_code: int = 200):
+    media = db.query(MediaAsset).order_by(MediaAsset.name).all()
+    copies = db.query(CopyBundle).order_by(CopyBundle.name).all()
+    settings, accounts, pages, pixels, bid_strategies, objectives, event_types, ctas = _load_campaign_wizard_common(db)
+    optimization_goals = [
+        ("OFFSITE_CONVERSIONS", "Conversiones (pixel) — recomendado para Compra/Lead"),
+        ("LANDING_PAGE_VIEWS", "Vistas de landing page"),
+        ("LINK_CLICKS", "Clics en enlace"),
+        ("IMPRESSIONS", "Impresiones"),
+        ("REACH", "Alcance"),
+        ("LEAD_GENERATION", "Generación de leads (formulario nativo FB)"),
+    ]
+    return request.app.state.templates.TemplateResponse(request, "campaigns/new_language.html", {
+        "request": request, "media": media, "copies": copies,
+        "accounts": accounts, "pages": pages, "pixels": pixels,
+        "settings": settings, "locales": META_LOCALES,
+        "bid_strategies": bid_strategies,
+        "objectives": objectives, "event_types": event_types,
+        "optimization_goals": optimization_goals, "ctas": ctas,
+        "error": error, "error_details": error_details or [],
+    }, status_code=status_code)
+
+
+def _render_normal_wizard(request: Request, db: Session, *, error: str | None = None, error_details: list[str] | None = None, status_code: int = 200):
+    media = db.query(MediaAsset).order_by(MediaAsset.name).all()
+    settings, accounts, pages, pixels, bid_strategies, objectives, event_types, ctas = _load_campaign_wizard_common(db)
+    optimization_goals = [
+        ("OFFSITE_CONVERSIONS", "Conversiones (pixel) — recomendado para Compra/Lead"),
+        ("LANDING_PAGE_VIEWS", "Vistas de landing page"),
+        ("LINK_CLICKS", "Clics en enlace"),
+        ("IMPRESSIONS", "Impresiones"),
+        ("REACH", "Alcance"),
+    ]
+    return request.app.state.templates.TemplateResponse(request, "campaigns/new_normal.html", {
+        "request": request, "media": media,
+        "accounts": accounts, "pages": pages, "pixels": pixels,
+        "settings": settings, "locales": META_LOCALES,
+        "bid_strategies": bid_strategies, "objectives": objectives,
+        "event_types": event_types, "optimization_goals": optimization_goals,
+        "ctas": ctas,
+        "error": error, "error_details": error_details or [],
+    }, status_code=status_code)
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -420,383 +531,257 @@ def new_campaign_type(request: Request):
 
 @router.get("/campaigns/new-language")
 def new_lang_wizard(request: Request, db: Session = Depends(get_db)):
-    from .. import meta_api
-    from ..models import AppSettings
-
-    media = db.query(MediaAsset).order_by(MediaAsset.name).all()
-    copies = db.query(CopyBundle).order_by(CopyBundle.name).all()
-    settings = db.query(AppSettings).first()
-    if not settings:
-        settings = AppSettings()
-        db.add(settings)
-        db.commit()
-    defaults = get_effective_defaults(db)
-    for key, value in defaults.items():
-        setattr(settings, f"default_{key}", value)
-
-    accounts, pages, pixels = [], [], []
-    try:
-        token = get_active_token(db)
-        accounts = meta_api.list_ad_accounts(token=token)
-        pages = meta_api.list_pages(token=token)
-        if settings and settings.default_ad_account_id:
-            try:
-                pixels = meta_api.list_pixels(settings.default_ad_account_id, token=token)
-            except Exception:
-                pass
-    except Exception:
-        pass
-
-    BID_STRATEGIES = [
-        ("LOWEST_COST_WITHOUT_CAP", "Volumen más alto"),
-        ("COST_CAP", "Objetivo de costo por resultado"),
-        ("LOWEST_COST_WITH_MIN_ROAS", "Objetivo de ROAS"),
-        ("LOWEST_COST_WITH_BID_CAP", "Límite de puja"),
-    ]
-    OBJECTIVES = [
-        ("OUTCOME_SALES", "Ventas"),
-        ("OUTCOME_LEADS", "Leads"),
-        ("OUTCOME_TRAFFIC", "Tráfico"),
-        ("OUTCOME_AWARENESS", "Reconocimiento"),
-        ("OUTCOME_ENGAGEMENT", "Interacción"),
-    ]
-    EVENT_TYPES = [
-        ("PURCHASE", "Compra"),
-        ("INITIATE_CHECKOUT", "Inicio de checkout"),
-        ("ADD_TO_CART", "Añadir al carrito"),
-        ("LEAD", "Lead"),
-        ("COMPLETE_REGISTRATION", "Registro completo"),
-        ("VIEW_CONTENT", "Vista de contenido"),
-    ]
-    OPTIMIZATION_GOALS = [
-        ("OFFSITE_CONVERSIONS", "Conversiones (pixel) — recomendado para Compra/Lead"),
-        ("LANDING_PAGE_VIEWS", "Vistas de landing page"),
-        ("LINK_CLICKS", "Clics en enlace"),
-        ("IMPRESSIONS", "Impresiones"),
-        ("REACH", "Alcance"),
-        ("LEAD_GENERATION", "Generación de leads (formulario nativo FB)"),
-    ]
-
-    CTAS = ["LEARN_MORE", "SHOP_NOW", "SIGN_UP", "SUBSCRIBE", "GET_OFFER", "APPLY_NOW", "DOWNLOAD", "CONTACT_US"]
-
-    return request.app.state.templates.TemplateResponse(request, "campaigns/new_language.html", {
-        "request": request, "media": media, "copies": copies,
-        "accounts": accounts, "pages": pages, "pixels": pixels,
-        "settings": settings, "locales": META_LOCALES,
-        "bid_strategies": BID_STRATEGIES,
-        "objectives": OBJECTIVES, "event_types": EVENT_TYPES,
-        "optimization_goals": OPTIMIZATION_GOALS, "ctas": CTAS,
-    })
+    return _render_language_wizard(request, db)
 
 
 @router.get("/campaigns/new-normal")
 def new_normal_wizard(request: Request, db: Session = Depends(get_db)):
-    from .. import meta_api
-    from ..models import AppSettings
-
-    media = db.query(MediaAsset).order_by(MediaAsset.name).all()
-    settings = db.query(AppSettings).first()
-    if not settings:
-        settings = AppSettings()
-        db.add(settings)
-        db.commit()
-    defaults = get_effective_defaults(db)
-    for key, value in defaults.items():
-        setattr(settings, f"default_{key}", value)
-
-    accounts, pages, pixels = [], [], []
-    try:
-        token = get_active_token(db)
-        accounts = meta_api.list_ad_accounts(token=token)
-        pages = meta_api.list_pages(token=token)
-        if settings and settings.default_ad_account_id:
-            try:
-                pixels = meta_api.list_pixels(settings.default_ad_account_id, token=token)
-            except Exception:
-                pass
-    except Exception:
-        pass
-
-    BID_STRATEGIES = [
-        ("LOWEST_COST_WITHOUT_CAP", "Volumen más alto"),
-        ("COST_CAP", "Objetivo de costo por resultado"),
-        ("LOWEST_COST_WITH_MIN_ROAS", "Objetivo de ROAS"),
-        ("LOWEST_COST_WITH_BID_CAP", "Límite de puja"),
-    ]
-    OBJECTIVES = [
-        ("OUTCOME_SALES", "Ventas"),
-        ("OUTCOME_LEADS", "Leads"),
-        ("OUTCOME_TRAFFIC", "Tráfico"),
-        ("OUTCOME_AWARENESS", "Reconocimiento"),
-        ("OUTCOME_ENGAGEMENT", "Interacción"),
-    ]
-    EVENT_TYPES = [
-        ("PURCHASE", "Compra"),
-        ("INITIATE_CHECKOUT", "Inicio de checkout"),
-        ("ADD_TO_CART", "Añadir al carrito"),
-        ("LEAD", "Lead"),
-        ("COMPLETE_REGISTRATION", "Registro completo"),
-        ("VIEW_CONTENT", "Vista de contenido"),
-    ]
-    OPTIMIZATION_GOALS = [
-        ("OFFSITE_CONVERSIONS", "Conversiones (pixel) — recomendado para Compra/Lead"),
-        ("LANDING_PAGE_VIEWS", "Vistas de landing page"),
-        ("LINK_CLICKS", "Clics en enlace"),
-        ("IMPRESSIONS", "Impresiones"),
-        ("REACH", "Alcance"),
-    ]
-    CTAS = ["LEARN_MORE", "SHOP_NOW", "SIGN_UP", "SUBSCRIBE", "GET_OFFER", "APPLY_NOW", "DOWNLOAD", "CONTACT_US"]
-
-    return request.app.state.templates.TemplateResponse(request, "campaigns/new_normal.html", {
-        "request": request, "media": media,
-        "accounts": accounts, "pages": pages, "pixels": pixels,
-        "settings": settings, "locales": META_LOCALES,
-        "bid_strategies": BID_STRATEGIES, "objectives": OBJECTIVES,
-        "event_types": EVENT_TYPES, "optimization_goals": OPTIMIZATION_GOALS,
-        "ctas": CTAS,
-    })
+    return _render_normal_wizard(request, db)
 
 
 @router.post("/campaigns/new-normal")
 async def post_normal_wizard(request: Request, db: Session = Depends(get_db)):
-    form = await request.form()
-    form_config = {k: v for k, v in form.items()}
-    token = get_active_token(db)
-    if not token:
-        raise HTTPException(400, "No hay conexion Meta activa")
-
-    act = form.get("ad_account_id", "").strip()
-    if not act.startswith("act_"):
-        act = f"act_{act}"
-
-    import re
-    ad_indices = set()
-    pattern = re.compile(r"^ads\[(\d+)\]\[")
-    for key in form.keys():
-        m = pattern.match(key)
-        if m:
-            ad_indices.add(int(m.group(1)))
-    if not ad_indices:
-        raise HTTPException(400, "Necesitas al menos 1 ad")
-
-    ads_data = []
-    for idx in sorted(ad_indices):
-        media_id_raw = form.get(f"ads[{idx}][media_asset_id]")
-        if not media_id_raw:
-            continue
-        asset = db.query(MediaAsset).filter(MediaAsset.id == int(media_id_raw)).first()
-        if not asset:
-            raise HTTPException(400, f"Ad #{idx+1}: creativo no encontrado")
-        if not asset.uploaded_to_meta or not asset.meta_id:
-            raise HTTPException(400, f"El creativo '{asset.name}' no está en Meta. Ve a /media y dale 'Subir a Meta'.")
-
-        ads_data.append({
-            "is_video": asset.type == "video",
-            "meta_id": asset.meta_id,
-            "body": form.get(f"ads[{idx}][body]", ""),
-            "title": form.get(f"ads[{idx}][title]", ""),
-            "description": form.get(f"ads[{idx}][description]", ""),
-            "link": form.get(f"ads[{idx}][link]", ""),
-            "cta_type": form.get(f"ads[{idx}][cta_type]", "LEARN_MORE"),
-            "ad_name": form.get(f"ads[{idx}][ad_name]", "").strip(),
-        })
-
-    if not ads_data:
-        raise HTTPException(400, "No completaste ningún ad")
-
-    countries = [c.strip().upper() for c in form.get("countries", "US").split(",") if c.strip()] or ["US"]
-    bid_amount_raw = (form.get("bid_amount") or "").strip()
-    bid_amount_cents = int(float(bid_amount_raw) * 100) if bid_amount_raw else 0
-    roas_floor_raw = (form.get("roas_floor") or "").strip()
-    roas_floor = float(roas_floor_raw) if roas_floor_raw else 0.0
-
-    # Multi-locale para normal
-    raw_ids_n = form.getlist("locale_id") if hasattr(form, "getlist") else []
-    if not raw_ids_n:
-        raw_ids_n = [form.get("locale_id", "6")]
     try:
-        locale_ids_n = [int(x) for x in raw_ids_n if str(x).strip().isdigit()]
-    except ValueError:
-        locale_ids_n = [6]
-    primary_locale_n = locale_ids_n[0] if locale_ids_n else 6
+        form = await request.form()
+        form_config = {k: v for k, v in form.items()}
+        token = get_active_token(db)
+        if not token:
+            raise HTTPException(400, "No hay conexion Meta activa")
 
-    from ..services.normal_campaign import create_normal_multi_ad
-    result = create_normal_multi_ad(
-        act_id=act, token=token,
-        page_id=form["page_id"], pixel_id=form["pixel_id"],
-        name=form["name"],
-        countries=countries,
-        age_min=int(form.get("age_min", "18")),
-        age_max=int(form.get("age_max", "65")),
-        locale_id=primary_locale_n,
-        locale_ids=locale_ids_n,
-        daily_budget_cents=int(float(form.get("daily_budget_usd", "5")) * 100),
-        is_cbo=(form.get("cbo_or_abo", "ABO") == "CBO"),
-        ads=ads_data,
-        objective=form.get("objective", "OUTCOME_SALES"),
-        optimization_goal=form.get("optimization_goal", "OFFSITE_CONVERSIONS"),
-        custom_event_type=form.get("custom_event_type", "PURCHASE"),
-        bid_strategy=form.get("bid_strategy", "LOWEST_COST_WITHOUT_CAP"),
-        bid_amount_cents=bid_amount_cents,
-        roas_floor=roas_floor,
-        instagram_id=form.get("instagram_id", "").strip(),
-        url_tags=form.get("url_tags", ""),
-        adset_name=form.get("adset_name", "").strip(),
-        start_time=form.get("start_time", "").strip(),
-        end_time=form.get("end_time", "").strip(),
-    )
-    status = 200 if not result.get("errors") else 400
-    if status != 200:
-        return JSONResponse({"ok": False, "result": result}, status_code=status)
+        act = form.get("ad_account_id", "").strip()
+        if not act.startswith("act_"):
+            act = f"act_{act}"
 
-    saved = _save_created_campaign(
-        db,
-        name=form["name"],
-        ad_account_id=act,
-        campaign_type="normal",
-        result=result,
-        config={**form_config, "ads": ads_data, "result": result},
-    )
-    return RedirectResponse(f"/dashboard/campaigns?created={saved.id}", status_code=303)
+        import re
+        ad_indices = set()
+        pattern = re.compile(r"^ads\[(\d+)\]\[")
+        for key in form.keys():
+            m = pattern.match(key)
+            if m:
+                ad_indices.add(int(m.group(1)))
+        if not ad_indices:
+            raise HTTPException(400, "Necesitas al menos 1 ad")
+
+        ads_data = []
+        for idx in sorted(ad_indices):
+            media_id_raw = form.get(f"ads[{idx}][media_asset_id]")
+            if not media_id_raw:
+                continue
+            asset = db.query(MediaAsset).filter(MediaAsset.id == int(media_id_raw)).first()
+            if not asset:
+                raise HTTPException(400, f"Ad #{idx+1}: creativo no encontrado")
+            if not asset.uploaded_to_meta or not asset.meta_id:
+                raise HTTPException(400, f"El creativo '{asset.name}' no está en Meta. Ve a /media y dale 'Subir a Meta'.")
+
+            ads_data.append({
+                "is_video": asset.type == "video",
+                "meta_id": asset.meta_id,
+                "body": form.get(f"ads[{idx}][body]", ""),
+                "title": form.get(f"ads[{idx}][title]", ""),
+                "description": form.get(f"ads[{idx}][description]", ""),
+                "link": form.get(f"ads[{idx}][link]", ""),
+                "cta_type": form.get(f"ads[{idx}][cta_type]", "LEARN_MORE"),
+                "ad_name": form.get(f"ads[{idx}][ad_name]", "").strip(),
+            })
+
+        if not ads_data:
+            raise HTTPException(400, "No completaste ningún ad")
+
+        countries = [c.strip().upper() for c in form.get("countries", "US").split(",") if c.strip()] or ["US"]
+        bid_amount_raw = (form.get("bid_amount") or "").strip()
+        bid_amount_cents = int(float(bid_amount_raw) * 100) if bid_amount_raw else 0
+        roas_floor_raw = (form.get("roas_floor") or "").strip()
+        roas_floor = float(roas_floor_raw) if roas_floor_raw else 0.0
+
+        raw_ids_n = form.getlist("locale_id") if hasattr(form, "getlist") else []
+        if not raw_ids_n:
+            raw_ids_n = [form.get("locale_id", "6")]
+        try:
+            locale_ids_n = [int(x) for x in raw_ids_n if str(x).strip().isdigit()]
+        except ValueError:
+            locale_ids_n = [6]
+        primary_locale_n = locale_ids_n[0] if locale_ids_n else 6
+
+        from ..services.normal_campaign import create_normal_multi_ad
+        result = create_normal_multi_ad(
+            act_id=act, token=token,
+            page_id=form["page_id"], pixel_id=form["pixel_id"],
+            name=form["name"],
+            countries=countries,
+            age_min=int(form.get("age_min", "18")),
+            age_max=int(form.get("age_max", "65")),
+            locale_id=primary_locale_n,
+            locale_ids=locale_ids_n,
+            daily_budget_cents=int(float(form.get("daily_budget_usd", "5")) * 100),
+            is_cbo=(form.get("cbo_or_abo", "ABO") == "CBO"),
+            ads=ads_data,
+            objective=form.get("objective", "OUTCOME_SALES"),
+            optimization_goal=form.get("optimization_goal", "OFFSITE_CONVERSIONS"),
+            custom_event_type=form.get("custom_event_type", "PURCHASE"),
+            bid_strategy=form.get("bid_strategy", "LOWEST_COST_WITHOUT_CAP"),
+            bid_amount_cents=bid_amount_cents,
+            roas_floor=roas_floor,
+            instagram_id=form.get("instagram_id", "").strip(),
+            url_tags=form.get("url_tags", ""),
+            adset_name=form.get("adset_name", "").strip(),
+            start_time=form.get("start_time", "").strip(),
+            end_time=form.get("end_time", "").strip(),
+        )
+        if result.get("errors"):
+            message, details = _format_campaign_errors(result)
+            return _render_normal_wizard(request, db, error=message, error_details=details, status_code=400)
+
+        saved = _save_created_campaign(
+            db,
+            name=form["name"],
+            ad_account_id=act,
+            campaign_type="normal",
+            result=result,
+            config={**form_config, "ads": ads_data, "result": result},
+        )
+        return RedirectResponse(f"/dashboard/campaigns?created={saved.id}", status_code=303)
+    except HTTPException as exc:
+        return _render_normal_wizard(request, db, error=str(exc.detail), error_details=[str(exc.detail)], status_code=400)
+    except Exception as exc:
+        return _render_normal_wizard(request, db, error=f"No se pudo crear la campaña normal: {exc}", error_details=[str(exc)], status_code=400)
 
 
 @router.post("/campaigns/new-language")
 async def post_lang_wizard(request: Request, db: Session = Depends(get_db)):
-    form = await request.form()
-    form_config = {k: v for k, v in form.items()}
-    token = get_active_token(db)
-    if not token:
-        raise HTTPException(400, "No hay conexion Meta activa")
-
-    act = form.get("ad_account_id", "").strip()
-    if not act.startswith("act_"):
-        act = f"act_{act}"
-
-    # Parsear los ads del form (ads[0][media_asset_id], etc.)
-    import re
-    ad_indices = set()
-    pattern = re.compile(r"^ads\[(\d+)\]\[")
-    for key in form.keys():
-        m = pattern.match(key)
-        if m:
-            ad_indices.add(int(m.group(1)))
-
-    if not ad_indices:
-        raise HTTPException(400, "Necesitas al menos 1 ad")
-
-    ads_data = []
-    for idx in sorted(ad_indices):
-        media_id_raw = form.get(f"ads[{idx}][media_asset_id]")
-        default_id_raw = form.get(f"ads[{idx}][default_media_id]")
-        copy_id_raw = form.get(f"ads[{idx}][copy_bundle_id]")
-        if not (media_id_raw and default_id_raw and copy_id_raw):
-            continue  # slot vacío, lo saltamos
-
-        real_asset = db.query(MediaAsset).filter(MediaAsset.id == int(media_id_raw)).first()
-        default_asset = db.query(MediaAsset).filter(MediaAsset.id == int(default_id_raw)).first()
-        bundle = db.query(CopyBundle).filter(CopyBundle.id == int(copy_id_raw)).first()
-        if not (real_asset and default_asset and bundle):
-            raise HTTPException(400, f"Ad #{idx+1}: asset o bundle no encontrado")
-
-        # Asegurar que estén subidos a Meta
-        for a in (real_asset, default_asset):
-            if not a.uploaded_to_meta or not a.meta_id:
-                raise HTTPException(400, f"El creativo '{a.name}' aún no se subió a Meta. Ve a /media y dale 'Subir a Meta'.")
-
-        carnadas_objs = db.query(LanguageCarnada).filter(
-            LanguageCarnada.id.in_(bundle.carnada_ids or [])
-        ).all()
-        if not carnadas_objs:
-            raise HTTPException(400, f"El paquete '{bundle.name}' no tiene carnadas")
-        # Respetar el orden de carnada_ids del bundle
-        carnadas_by_id = {c.id: c for c in carnadas_objs}
-        carnadas_ordered = [carnadas_by_id[i] for i in (bundle.carnada_ids or []) if i in carnadas_by_id]
-
-        carnadas = [{
-            "locale_id": c.locale_id, "locale_code": c.locale_code,
-            "body": c.body, "title": c.title, "desc": c.description, "url": c.url,
-        } for c in carnadas_ordered]
-
-        ads_data.append({
-            "target_locale_id": bundle.target_locale_id or 6,
-            "target_locale_code": bundle.target_locale_code or "en_XX",
-            "real_media_id": real_asset.meta_id,
-            "default_media_id": default_asset.meta_id,
-            "is_video": real_asset.type == "video",
-            "real_body": bundle.real_body,
-            "real_title": bundle.real_title,
-            "real_desc": bundle.real_desc or "",
-            "real_url": bundle.real_url,
-            "url_tags": form.get("url_tags", ""),
-            "carnadas": carnadas,
-            "cta_type": form.get(f"ads[{idx}][cta_type]", "LEARN_MORE"),
-            "ad_name": form.get(f"ads[{idx}][ad_name]", "").strip(),
-        })
-
-    if not ads_data:
-        raise HTTPException(400, "No completaste ningún ad (falta creativo/copy en todos los slots)")
-
-    # Países (coma-separados)
-    countries = [c.strip().upper() for c in form.get("countries", "US").split(",") if c.strip()]
-    if not countries:
-        countries = ["US"]
-
-    # Bid amount: viene en USD, Meta usa centavos
-    bid_amount_raw = (form.get("bid_amount") or "").strip()
-    bid_amount_cents = int(float(bid_amount_raw) * 100) if bid_amount_raw else 0
-    roas_floor_raw = (form.get("roas_floor") or "").strip()
-    roas_floor = float(roas_floor_raw) if roas_floor_raw else 0.0
-
-    # Multi-locale: el form puede enviar varios adset_locale_id (multiselect)
-    raw_ids = form.getlist("adset_locale_id") if hasattr(form, "getlist") else []
-    if not raw_ids:
-        raw_ids = [form.get("adset_locale_id", "6")]
     try:
-        adset_locale_ids = [int(x) for x in raw_ids if str(x).strip().isdigit()]
-    except ValueError:
-        adset_locale_ids = [6]
-    primary_locale_id = adset_locale_ids[0] if adset_locale_ids else 6
+        form = await request.form()
+        form_config = {k: v for k, v in form.items()}
+        token = get_active_token(db)
+        if not token:
+            raise HTTPException(400, "No hay conexion Meta activa")
 
-    from ..services.language_trick import create_language_trick_multi_ad
-    result = create_language_trick_multi_ad(
-        act_id=act,
-        token=token,
-        page_id=form["page_id"],
-        pixel_id=form["pixel_id"],
-        name=form["name"],
-        countries=countries,
-        age_min=int(form.get("age_min", "40")),
-        age_max=int(form.get("age_max", "65")),
-        adset_locale_id=primary_locale_id,
-        adset_locale_ids=adset_locale_ids,
-        daily_budget_cents=int(float(form.get("daily_budget_usd", "1.50")) * 100),
-        is_cbo=(form.get("cbo_or_abo", "ABO") == "CBO"),
-        ads=ads_data,
-        objective=form.get("objective", "OUTCOME_SALES"),
-        optimization_goal=form.get("optimization_goal", "OFFSITE_CONVERSIONS"),
-        custom_event_type=form.get("custom_event_type", "PURCHASE"),
-        bid_strategy=form.get("bid_strategy", "LOWEST_COST_WITHOUT_CAP"),
-        bid_amount_cents=bid_amount_cents,
-        roas_floor=roas_floor,
-        instagram_id=form.get("instagram_id", "").strip(),
-        adset_name=form.get("adset_name", "").strip(),
-        start_time=form.get("start_time", "").strip(),
-        end_time=form.get("end_time", "").strip(),
-    )
+        act = form.get("ad_account_id", "").strip()
+        if not act.startswith("act_"):
+            act = f"act_{act}"
 
-    status = 200 if not result.get("errors") else 400
-    if status != 200:
-        return JSONResponse({"ok": False, "result": result}, status_code=status)
+        import re
+        ad_indices = set()
+        pattern = re.compile(r"^ads\[(\d+)\]\[")
+        for key in form.keys():
+            m = pattern.match(key)
+            if m:
+                ad_indices.add(int(m.group(1)))
 
-    saved = _save_created_campaign(
-        db,
-        name=form["name"],
-        ad_account_id=act,
-        campaign_type="language",
-        result=result,
-        config={**form_config, "ads": ads_data, "result": result},
-    )
-    return RedirectResponse(f"/dashboard/campaigns?created={saved.id}", status_code=303)
+        if not ad_indices:
+            raise HTTPException(400, "Necesitas al menos 1 ad")
+
+        ads_data = []
+        for idx in sorted(ad_indices):
+            media_id_raw = form.get(f"ads[{idx}][media_asset_id]")
+            default_id_raw = form.get(f"ads[{idx}][default_media_id]")
+            copy_id_raw = form.get(f"ads[{idx}][copy_bundle_id]")
+            if not (media_id_raw and default_id_raw and copy_id_raw):
+                continue
+
+            real_asset = db.query(MediaAsset).filter(MediaAsset.id == int(media_id_raw)).first()
+            default_asset = db.query(MediaAsset).filter(MediaAsset.id == int(default_id_raw)).first()
+            bundle = db.query(CopyBundle).filter(CopyBundle.id == int(copy_id_raw)).first()
+            if not (real_asset and default_asset and bundle):
+                raise HTTPException(400, f"Ad #{idx+1}: asset o bundle no encontrado")
+
+            for a in (real_asset, default_asset):
+                if not a.uploaded_to_meta or not a.meta_id:
+                    raise HTTPException(400, f"El creativo '{a.name}' aún no se subió a Meta. Ve a /media y dale 'Subir a Meta'.")
+
+            carnadas_objs = db.query(LanguageCarnada).filter(
+                LanguageCarnada.id.in_(bundle.carnada_ids or [])
+            ).all()
+            if not carnadas_objs:
+                raise HTTPException(400, f"El paquete '{bundle.name}' no tiene carnadas")
+            carnadas_by_id = {c.id: c for c in carnadas_objs}
+            carnadas_ordered = [carnadas_by_id[i] for i in (bundle.carnada_ids or []) if i in carnadas_by_id]
+
+            carnadas = [{
+                "locale_id": c.locale_id, "locale_code": c.locale_code,
+                "body": c.body, "title": c.title, "desc": c.description, "url": c.url,
+            } for c in carnadas_ordered]
+
+            ads_data.append({
+                "target_locale_id": bundle.target_locale_id or 6,
+                "target_locale_code": bundle.target_locale_code or "en_XX",
+                "real_media_id": real_asset.meta_id,
+                "default_media_id": default_asset.meta_id,
+                "is_video": real_asset.type == "video",
+                "real_body": bundle.real_body,
+                "real_title": bundle.real_title,
+                "real_desc": bundle.real_desc or "",
+                "real_url": bundle.real_url,
+                "url_tags": form.get("url_tags", ""),
+                "carnadas": carnadas,
+                "cta_type": form.get(f"ads[{idx}][cta_type]", "LEARN_MORE"),
+                "ad_name": form.get(f"ads[{idx}][ad_name]", "").strip(),
+            })
+
+        if not ads_data:
+            raise HTTPException(400, "No completaste ningún ad (falta creativo/copy en todos los slots)")
+
+        countries = [c.strip().upper() for c in form.get("countries", "US").split(",") if c.strip()]
+        if not countries:
+            countries = ["US"]
+
+        bid_amount_raw = (form.get("bid_amount") or "").strip()
+        bid_amount_cents = int(float(bid_amount_raw) * 100) if bid_amount_raw else 0
+        roas_floor_raw = (form.get("roas_floor") or "").strip()
+        roas_floor = float(roas_floor_raw) if roas_floor_raw else 0.0
+
+        raw_ids = form.getlist("adset_locale_id") if hasattr(form, "getlist") else []
+        if not raw_ids:
+            raw_ids = [form.get("adset_locale_id", "6")]
+        try:
+            adset_locale_ids = [int(x) for x in raw_ids if str(x).strip().isdigit()]
+        except ValueError:
+            adset_locale_ids = [6]
+        primary_locale_id = adset_locale_ids[0] if adset_locale_ids else 6
+
+        from ..services.language_trick import create_language_trick_multi_ad
+        result = create_language_trick_multi_ad(
+            act_id=act,
+            token=token,
+            page_id=form["page_id"],
+            pixel_id=form["pixel_id"],
+            name=form["name"],
+            countries=countries,
+            age_min=int(form.get("age_min", "40")),
+            age_max=int(form.get("age_max", "65")),
+            adset_locale_id=primary_locale_id,
+            adset_locale_ids=adset_locale_ids,
+            daily_budget_cents=int(float(form.get("daily_budget_usd", "1.50")) * 100),
+            is_cbo=(form.get("cbo_or_abo", "ABO") == "CBO"),
+            ads=ads_data,
+            objective=form.get("objective", "OUTCOME_SALES"),
+            optimization_goal=form.get("optimization_goal", "OFFSITE_CONVERSIONS"),
+            custom_event_type=form.get("custom_event_type", "PURCHASE"),
+            bid_strategy=form.get("bid_strategy", "LOWEST_COST_WITHOUT_CAP"),
+            bid_amount_cents=bid_amount_cents,
+            roas_floor=roas_floor,
+            instagram_id=form.get("instagram_id", "").strip(),
+            adset_name=form.get("adset_name", "").strip(),
+            start_time=form.get("start_time", "").strip(),
+            end_time=form.get("end_time", "").strip(),
+        )
+
+        if result.get("errors"):
+            message, details = _format_campaign_errors(result)
+            return _render_language_wizard(request, db, error=message, error_details=details, status_code=400)
+
+        saved = _save_created_campaign(
+            db,
+            name=form["name"],
+            ad_account_id=act,
+            campaign_type="language",
+            result=result,
+            config={**form_config, "ads": ads_data, "result": result},
+        )
+        return RedirectResponse(f"/dashboard/campaigns?created={saved.id}", status_code=303)
+    except HTTPException as exc:
+        return _render_language_wizard(request, db, error=str(exc.detail), error_details=[str(exc.detail)], status_code=400)
+    except Exception as exc:
+        return _render_language_wizard(request, db, error=f"No se pudo crear la campaña con truco de idiomas: {exc}", error_details=[str(exc)], status_code=400)
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -865,7 +850,8 @@ async def create_lang_campaign(request: Request, db: Session = Depends(get_db)):
     )
 
     if result.get("errors"):
-        return JSONResponse({"ok": False, "errors": result["errors"], "ids": result}, status_code=400)
+        message, details = _format_campaign_errors(result)
+        return _render_language_wizard(request, db, error=message, error_details=details, status_code=400)
     saved = _save_created_campaign(
         db,
         name=form["name"],

@@ -149,6 +149,11 @@ def build_asset_feed_spec(real_media_id: str, default_media_id: str, is_video: b
     # Si vienen varios locale IDs, la regla matchea TODOS ellos
     rule_locales = target_locale_ids if target_locale_ids else [target_locale_id]
 
+    # Meta está rechazando creatives con múltiples website_url distintas dentro
+    # del mismo asset_feed_spec. Para este flujo no necesitamos landers distintas
+    # por idioma: usamos una URL canónica única y dejamos que cambien solo copy y labels.
+    canonical_url = (real_url or carnadas[0].get("url") or "").strip()
+
     media_key = "videos" if is_video else "images"
     id_key = "video_id" if is_video else "hash"
     label_key = "video_label" if is_video else "image_label"
@@ -173,7 +178,7 @@ def build_asset_feed_spec(real_media_id: str, default_media_id: str, is_video: b
             bodies.append({"adlabels": [{"name": rl}], "text": real_body})
             titles.append({"adlabels": [{"name": rl}], "text": real_title})
             descs .append({"adlabels": [{"name": rl}], "text": real_desc})
-            links .append({"adlabels": [{"name": rl}], "website_url": real_url, "display_url": _domain(real_url)})
+            links .append({"adlabels": [{"name": rl}], "website_url": canonical_url, "display_url": _domain(canonical_url)})
             rules.append({
                 "customization_spec": {"age_max": 65, "age_min": 13, "locales": rule_locales},
                 label_key: {"name": rl},
@@ -187,7 +192,7 @@ def build_asset_feed_spec(real_media_id: str, default_media_id: str, is_video: b
         bodies.append({"adlabels": [{"name": lbl}], "text": c["body"]})
         titles.append({"adlabels": [{"name": lbl}], "text": c["title"]})
         descs .append({"adlabels": [{"name": lbl}], "text": c.get("desc", "")})
-        links .append({"adlabels": [{"name": lbl}], "website_url": c["url"], "display_url": _domain(c["url"])})
+        links .append({"adlabels": [{"name": lbl}], "website_url": canonical_url, "display_url": _domain(canonical_url)})
         rules.append({
             "customization_spec": {"age_max": 65, "age_min": 13, "locales": [c["locale_id"]]},
             label_key: {"name": default_label},
@@ -202,7 +207,7 @@ def build_asset_feed_spec(real_media_id: str, default_media_id: str, is_video: b
         bodies.append({"adlabels": [{"name": rl}], "text": real_body})
         titles.append({"adlabels": [{"name": rl}], "text": real_title})
         descs .append({"adlabels": [{"name": rl}], "text": real_desc})
-        links .append({"adlabels": [{"name": rl}], "website_url": real_url, "display_url": _domain(real_url)})
+        links .append({"adlabels": [{"name": rl}], "website_url": canonical_url, "display_url": _domain(canonical_url)})
         rules.append({
             "customization_spec": {"age_max": 65, "age_min": 13, "locales": rule_locales},
             label_key: {"name": rl}, "body_label": {"name": rl},
