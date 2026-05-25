@@ -55,7 +55,7 @@
   </button>
   <span class="text-xs text-muted"><span id="sel-count">0</span> seleccionados</span>
 </div>
-<div class="bg-panel border border-border rounded-lg overflow-hidden">
+<div class="bg-panel border border-border rounded-lg overflow-x-auto">
   <table class="w-full text-sm">
     <thead class="bg-bg border-b border-border text-xs">
       <tr>
@@ -74,7 +74,7 @@
         <td class="px-3 py-2 font-medium">{{ c.language_name }}</td>
         <td class="px-3 py-2">{{ c.title }}</td>
         <td class="px-3 py-2 text-xs text-muted">{{ c.body[:60] }}{% if c.body|length > 60 %}…{% endif %}</td>
-        <td class="px-3 py-2 text-xs"><a href="{{ c.url }}" target="_blank" class="text-accent hover:underline font-mono">{{ c.url[:35] }}…</a></td>
+        <td class="px-3 py-2 text-xs"><a href="{{ c.url }}" target="_blank" class="text-accent hover:underline font-mono">{{ c.url }}…</a></td>
         <td class="px-3 py-2">
           <div class="flex gap-2">
             <a href="/dashboard/carnadas/{{ c.id }}/edit" class="text-xs bg-bg border border-border hover:border-accent px-2 py-1 rounded">Editar</a>
