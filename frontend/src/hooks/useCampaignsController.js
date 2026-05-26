@@ -25,6 +25,20 @@ function upsertExplorerJob(row) {
   return next;
 }
 
+function jobTimestamp(job) {
+  const value = job?.created_at || job?.started_at || job?.finished_at || "";
+  const ms = Date.parse(value);
+  return Number.isNaN(ms) ? 0 : ms;
+}
+
+function sortJobsDesc(rows) {
+  return [...rows].sort((a, b) => {
+    const byTime = jobTimestamp(b) - jobTimestamp(a);
+    if (byTime !== 0) return byTime;
+    return String(b?._id || "").localeCompare(String(a?._id || ""));
+  });
+}
+
 export default function useCampaignsController() {
   const [configs, setConfigs] = useState([]);
   const [configId, setConfigId] = useState("");
@@ -81,7 +95,7 @@ export default function useCampaignsController() {
 
   async function loadJobs() {
     const [rows, explorerRows] = await Promise.all([api.listJobs(), loadExplorerJobs()]);
-    setJobs([...explorerRows, ...rows]);
+    setJobs(sortJobsDesc([...explorerRows, ...rows]));
   }
 
   useEffect(() => {
