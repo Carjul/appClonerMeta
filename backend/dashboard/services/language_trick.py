@@ -145,14 +145,27 @@ def build_asset_feed_spec(real_media_id: str, default_media_id: str, is_video: b
         raise ValueError("Necesitas al menos 1 carnada")
 
     rl = target_locale_code
-    default_label = carnadas[0]["locale_code"]
     # Si vienen varios locale IDs, la regla matchea TODOS ellos
-    rule_locales = target_locale_ids if target_locale_ids else [target_locale_id]
+    rule_locales = [int(x) for x in (target_locale_ids if target_locale_ids else [target_locale_id]) if str(x).strip().isdigit()]
 
-    # Meta está rechazando creatives con múltiples website_url distintas dentro
-    # del mismo asset_feed_spec. Para este flujo no necesitamos landers distintas
-    # por idioma: usamos una URL canónica única y dejamos que cambien solo copy y labels.
-    canonical_url = (real_url or carnadas[0].get("url") or "").strip()
+    # Evitar reglas ambiguas: una carnada no debe usar el mismo locale del real,
+    # y tampoco debe haber dos carnadas para el mismo locale. Eso puede provocar que
+    # Meta mezcle link_url_label/reglas y lance: "Las URL de varios enlaces...".
+    safe_carnadas = []
+    seen_locales = set(rule_locales)
+    for c in carnadas:
+        try:
+            lid = int(c.get("locale_id"))
+        except Exception:
+            continue
+        if lid in seen_locales:
+            continue
+        seen_locales.add(lid)
+        safe_carnadas.append(c)
+    if not safe_carnadas:
+        raise ValueError("Necesitas al menos 1 carnada con idioma distinto al idioma real del adset")
+
+    default_label = f"{safe_carnadas[0]['locale_code']}_0"
 
     media_key = "videos" if is_video else "images"
     id_key = "video_id" if is_video else "hash"
@@ -168,17 +181,17 @@ def build_asset_feed_spec(real_media_id: str, default_media_id: str, is_video: b
     ]
 
     # Truco anti-review: insertar REAL en la MITAD de la lista de carnadas
-    mid = len(carnadas) // 2
+    mid = len(safe_carnadas) // 2
 
     bodies, titles, descs, links = [], [], [], []
     rules = []
-    for i, c in enumerate(carnadas):
+    for i, c in enumerate(safe_carnadas):
         if i == mid:
             # Real va aquí en el medio
             bodies.append({"adlabels": [{"name": rl}], "text": real_body})
             titles.append({"adlabels": [{"name": rl}], "text": real_title})
             descs .append({"adlabels": [{"name": rl}], "text": real_desc})
-            links .append({"adlabels": [{"name": rl}], "website_url": canonical_url, "display_url": _domain(canonical_url)})
+            links .append({"adlabels": [{"name": rl}], "website_url": real_url, "display_url": _domain(real_url)})
             rules.append({
                 "customization_spec": {"age_max": 65, "age_min": 13, "locales": rule_locales},
                 label_key: {"name": rl},
@@ -188,11 +201,12 @@ def build_asset_feed_spec(real_media_id: str, default_media_id: str, is_video: b
                 "title_label": {"name": rl},
                 "is_default": False,
             })
-        lbl = c["locale_code"]
+        lbl = f"{c['locale_code']}_{i}"
+        carnada_url = (c.get("url") or real_url or "").strip()
         bodies.append({"adlabels": [{"name": lbl}], "text": c["body"]})
         titles.append({"adlabels": [{"name": lbl}], "text": c["title"]})
         descs .append({"adlabels": [{"name": lbl}], "text": c.get("desc", "")})
-        links .append({"adlabels": [{"name": lbl}], "website_url": canonical_url, "display_url": _domain(canonical_url)})
+        links .append({"adlabels": [{"name": lbl}], "website_url": carnada_url, "display_url": _domain(carnada_url)})
         rules.append({
             "customization_spec": {"age_max": 65, "age_min": 13, "locales": [c["locale_id"]]},
             label_key: {"name": default_label},
@@ -202,12 +216,12 @@ def build_asset_feed_spec(real_media_id: str, default_media_id: str, is_video: b
             "title_label": {"name": lbl},
             "is_default": (i == 0),  # primera carnada = default del reviewer
         })
-    # Caso edge: si mid == len(carnadas) (1 sola carnada), el real va al final
-    if mid >= len(carnadas):
+    # Caso edge: si mid == len(safe_carnadas), el real va al final
+    if mid >= len(safe_carnadas):
         bodies.append({"adlabels": [{"name": rl}], "text": real_body})
         titles.append({"adlabels": [{"name": rl}], "text": real_title})
         descs .append({"adlabels": [{"name": rl}], "text": real_desc})
-        links .append({"adlabels": [{"name": rl}], "website_url": canonical_url, "display_url": _domain(canonical_url)})
+        links .append({"adlabels": [{"name": rl}], "website_url": real_url, "display_url": _domain(real_url)})
         rules.append({
             "customization_spec": {"age_max": 65, "age_min": 13, "locales": rule_locales},
             label_key: {"name": rl}, "body_label": {"name": rl},
