@@ -342,8 +342,15 @@ export default function useCampaignsController() {
     } catch {
       setJobLogs([]);
     }
-    location.href = "#lb";
-  }
+ // Navega al elemento
+  location.hash = "lb";
+  
+  // Limpia el hash después de un tiempo (cuando la UI ya haya renderizado)
+  setTimeout(() => {
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+  }, 500);
+
+}
 
   async function runExplorer() {
     if (!configId) return;
