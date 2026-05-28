@@ -25,16 +25,21 @@ def _build_targeting(countries, age_min: int, age_max: int, locales: List[int]) 
 
 def _get_page_backed_ig(page_id: str, token: str) -> Optional[str]:
     try:
-        pages = requests.get(f"{GRAPH}/me/accounts",
-                             params={"fields": "id,access_token", "limit": 100,
-                                     "access_token": token}, timeout=30).json()
-        page_token = next((p["access_token"] for p in pages.get("data", []) if p["id"] == page_id), None)
+        page = requests.get(
+            f"{GRAPH}/{page_id}",
+            params={"fields": "access_token", "access_token": token},
+            timeout=30,
+        ).json()
+        page_token = page.get("access_token")
         if not page_token:
             return None
-        igs = requests.get(f"{GRAPH}/{page_id}/page_backed_instagram_accounts",
-                           params={"access_token": page_token}, timeout=30).json()
+        igs = requests.get(
+            f"{GRAPH}/{page_id}/page_backed_instagram_accounts",
+            params={"access_token": page_token},
+            timeout=30,
+        ).json()
         for ig in igs.get("data", []):
-            return ig["id"]
+            return ig.get("id")
     except Exception:
         pass
     return None
