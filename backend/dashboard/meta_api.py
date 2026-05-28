@@ -81,6 +81,24 @@ def delete(path: str, token: Optional[str] = None) -> Dict[str, Any]:
     return _request("DELETE", path, token=token)
 
 
+def get_all_pages(path: str, params: Optional[dict] = None, token: Optional[str] = None,
+                  max_pages: int = 100) -> List[dict]:
+    """Recorre la paginacion de Meta Graph API y devuelve todos los registros encontrados."""
+    out: List[dict] = []
+    res = get(path, params, token)
+    out.extend(res.get("data", []))
+
+    next_url = res.get("paging", {}).get("next")
+    pages_fetched = 1
+    while next_url and pages_fetched < max_pages:
+        res = get(next_url, token=token)
+        out.extend(res.get("data", []))
+        next_url = res.get("paging", {}).get("next")
+        pages_fetched += 1
+
+    return out
+
+
 def list_ad_accounts(token: Optional[str] = None) -> List[dict]:
     out = []
     res = get("me/adaccounts", {"fields": "id,name,account_id,business,currency,timezone_name", "limit": 100}, token)
@@ -89,8 +107,11 @@ def list_ad_accounts(token: Optional[str] = None) -> List[dict]:
 
 
 def list_pages(token: Optional[str] = None) -> List[dict]:
-    res = get("me/accounts", {"fields": "id,name,instagram_business_account", "limit": 100}, token)
-    return res.get("data", [])
+    return get_all_pages(
+        "me/accounts",
+        {"fields": "id,name,instagram_business_account", "limit": 100},
+        token,
+    )
 
 
 def list_pixels(act_id: str, token: Optional[str] = None) -> List[dict]:
