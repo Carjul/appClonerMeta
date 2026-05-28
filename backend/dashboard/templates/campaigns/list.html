@@ -44,9 +44,12 @@
         </td>
         <td class="px-3 py-2 text-xs">{{ c.last_status or '—' }}</td>
         <td class="px-3 py-2">
-          <form method="post" action="/dashboard/campaigns/{{ c.id }}/delete" class="inline" onsubmit="return confirm('¿Borrar registro local? La campaña en Meta queda intacta.')">
-            <button class="text-err text-xs inline-flex items-center gap-1">{{ icon('trash-2') }}Borrar</button>
-          </form>
+          <div class="flex flex-wrap items-center gap-3">
+            <a href="/dashboard/campaigns/{{ c.id }}/duplicate" class="text-accent text-xs inline-flex items-center gap-1">{{ icon('copy') }}Duplicar</a>
+            <form method="post" action="/dashboard/campaigns/{{ c.id }}/delete" class="inline" onsubmit="return confirm('¿Borrar registro local? La campaña en Meta queda intacta.')">
+              <button class="text-err text-xs inline-flex items-center gap-1">{{ icon('trash-2') }}Borrar</button>
+            </form>
+          </div>
         </td>
       </tr>
       {% endfor %}

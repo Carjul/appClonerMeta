@@ -326,5 +326,64 @@ document.querySelectorAll('.locale-picker').forEach(picker => {
     b.addEventListener('click', () => b.closest('.locale-chip').remove());
   });
 });
+
+// Precarga para duplicar campañas
+(function(){
+  const clone = {{ form|tojson }};
+  if (!clone || Object.keys(clone).length === 0) return;
+
+  function fieldsByName(name) {
+    return [...document.querySelectorAll('input, select, textarea')].filter(el => el.name === name);
+  }
+  function setField(name, value) {
+    if (value === null || value === undefined || typeof value === 'object') return;
+    const fields = fieldsByName(name);
+    fields.forEach(el => {
+      const valueStr = String(value);
+      if (el.tagName === 'SELECT') {
+        el.value = valueStr;
+        if (el.value !== valueStr && name === 'ad_account_id') {
+          el.value = valueStr.startsWith('act_') ? valueStr.replace(/^act_/, '') : `act_${valueStr}`;
+        }
+      } else {
+        el.value = valueStr;
+      }
+    });
+  }
+  function setLocales(inputName, ids) {
+    if (!ids) return;
+    if (!Array.isArray(ids)) ids = [ids];
+    ids = ids.map(String).filter(Boolean);
+    const picker = document.querySelector(`.locale-picker[data-input-name="${inputName}"]`);
+    if (!picker) return;
+    const chips = picker.querySelector('.locale-chips');
+    const sel = picker.querySelector('.locale-picker-select');
+    chips.innerHTML = '';
+    ids.forEach(id => {
+      const opt = [...sel.options].find(o => o.value === id);
+      const label = opt ? (opt.dataset.label || opt.textContent) : id;
+      const chip = document.createElement('span');
+      chip.className = 'locale-chip inline-flex items-center gap-1.5 px-2 py-1 rounded bg-accent/20 text-accent text-sm font-medium';
+      chip.dataset.id = id;
+      chip.innerHTML = `${label} <button type="button" class="chip-remove w-4 h-4 inline-flex items-center justify-center rounded-full hover:bg-accent/30 text-xs leading-none">×</button><input type="hidden" name="${inputName}" value="${id}">`;
+      chip.querySelector('.chip-remove').addEventListener('click', () => chip.remove());
+      chips.appendChild(chip);
+    });
+  }
+
+  const adCount = Math.max(1, Math.min(50, parseInt(clone._clone_ads_count || '1', 10)));
+  const numInput = document.getElementById('num_ads');
+  const buildBtn = document.getElementById('build-ads');
+  if (numInput && buildBtn) {
+    numInput.value = adCount;
+    buildBtn.click();
+  }
+
+  Object.entries(clone).forEach(([key, value]) => {
+    if (key.startsWith('_') || key === 'ads' || key === 'result') return;
+    setField(key, value);
+  });
+  setLocales('locale_id', clone._locale_ids || clone.locale_ids || clone.locale_id);
+})();
 </script>
 {% endblock %}

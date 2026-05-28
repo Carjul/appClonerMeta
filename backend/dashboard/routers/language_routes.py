@@ -65,7 +65,7 @@ def _format_campaign_errors(result: dict | None = None, fallback: str | None = N
     return message, errors
 
 
-def _load_campaign_wizard_common(db: Session):
+def _load_campaign_wizard_common(db: Session, selected_ad_account_id: str | None = None):
     from .. import meta_api
     from ..models import AppSettings
 
@@ -83,9 +83,10 @@ def _load_campaign_wizard_common(db: Session):
         token = get_active_token(db)
         accounts = meta_api.list_ad_accounts(token=token)
         pages = meta_api.list_pages(token=token)
-        if settings and settings.default_ad_account_id:
+        pixel_account_id = selected_ad_account_id or (settings.default_ad_account_id if settings else None)
+        if pixel_account_id:
             try:
-                pixels = meta_api.list_pixels(settings.default_ad_account_id, token=token)
+                pixels = meta_api.list_pixels(pixel_account_id, token=token)
             except Exception:
                 pass
     except Exception:
@@ -116,10 +117,13 @@ def _load_campaign_wizard_common(db: Session):
     return settings, accounts, pages, pixels, bid_strategies, objectives, event_types, ctas
 
 
-def _render_language_wizard(request: Request, db: Session, *, error: str | None = None, error_details: list[str] | None = None, status_code: int = 200):
+def _render_language_wizard(request: Request, db: Session, *, error: str | None = None,
+                            error_details: list[str] | None = None, status_code: int = 200,
+                            form: dict | None = None):
     media = db.query(MediaAsset).order_by(MediaAsset.name).all()
     copies = db.query(CopyBundle).order_by(CopyBundle.name).all()
-    settings, accounts, pages, pixels, bid_strategies, objectives, event_types, ctas = _load_campaign_wizard_common(db)
+    selected_ad_account_id = (form or {}).get("ad_account_id") if isinstance(form, dict) else None
+    settings, accounts, pages, pixels, bid_strategies, objectives, event_types, ctas = _load_campaign_wizard_common(db, selected_ad_account_id)
     optimization_goals = [
         ("OFFSITE_CONVERSIONS", "Conversiones (pixel) — recomendado para Compra/Lead"),
         ("LANDING_PAGE_VIEWS", "Vistas de landing page"),
@@ -136,12 +140,16 @@ def _render_language_wizard(request: Request, db: Session, *, error: str | None 
         "objectives": objectives, "event_types": event_types,
         "optimization_goals": optimization_goals, "ctas": ctas,
         "error": error, "error_details": error_details or [],
+        "form": form or {},
     }, status_code=status_code)
 
 
-def _render_normal_wizard(request: Request, db: Session, *, error: str | None = None, error_details: list[str] | None = None, status_code: int = 200):
+def _render_normal_wizard(request: Request, db: Session, *, error: str | None = None,
+                          error_details: list[str] | None = None, status_code: int = 200,
+                          form: dict | None = None):
     media = db.query(MediaAsset).order_by(MediaAsset.name).all()
-    settings, accounts, pages, pixels, bid_strategies, objectives, event_types, ctas = _load_campaign_wizard_common(db)
+    selected_ad_account_id = (form or {}).get("ad_account_id") if isinstance(form, dict) else None
+    settings, accounts, pages, pixels, bid_strategies, objectives, event_types, ctas = _load_campaign_wizard_common(db, selected_ad_account_id)
     optimization_goals = [
         ("OFFSITE_CONVERSIONS", "Conversiones (pixel) — recomendado para Compra/Lead"),
         ("LANDING_PAGE_VIEWS", "Vistas de landing page"),
@@ -157,6 +165,7 @@ def _render_normal_wizard(request: Request, db: Session, *, error: str | None = 
         "event_types": event_types, "optimization_goals": optimization_goals,
         "ctas": ctas,
         "error": error, "error_details": error_details or [],
+        "form": form or {},
     }, status_code=status_code)
 
 
@@ -539,6 +548,38 @@ def new_normal_wizard(request: Request, db: Session = Depends(get_db)):
     return _render_normal_wizard(request, db)
 
 
+@router.get("/campaigns/{camp_id}/duplicate")
+def duplicate_campaign(camp_id: int, request: Request, db: Session = Depends(get_db)):
+    campaign = db.query(Campaign).filter(Campaign.id == camp_id).first()
+    if not campaign:
+        raise HTTPException(404, "Campaña no encontrada")
+
+    config = dict(campaign.config or {})
+    config.pop("result", None)
+    config["name"] = f"{config.get('name') or campaign.name or 'Campaña'} (copia)"
+
+    import re
+    ad_indices = set()
+    for key in config.keys():
+        match = re.match(r"^ads\[(\d+)\]\[", str(key))
+        if match:
+            ad_indices.add(int(match.group(1)))
+    if ad_indices:
+        config["_clone_ads_count"] = max(ad_indices) + 1
+    elif isinstance(config.get("ads"), list) and config["ads"]:
+        config["_clone_ads_count"] = len(config["ads"])
+    else:
+        config["_clone_ads_count"] = 1
+
+    campaign_type = (campaign.campaign_type or config.get("campaign_type") or "normal").lower()
+    if campaign_type == "language":
+        config["_locale_ids"] = config.get("adset_locale_ids") or config.get("adset_locale_id") or "6"
+        return _render_language_wizard(request, db, form=config)
+
+    config["_locale_ids"] = config.get("locale_ids") or config.get("locale_id") or "6"
+    return _render_normal_wizard(request, db, form=config)
+
+
 @router.post("/campaigns/new-normal")
 async def post_normal_wizard(request: Request, db: Session = Depends(get_db)):
     try:
@@ -637,7 +678,7 @@ async def post_normal_wizard(request: Request, db: Session = Depends(get_db)):
             ad_account_id=act,
             campaign_type="normal",
             result=result,
-            config={**form_config, "ads": ads_data, "result": result},
+            config={**form_config, "locale_ids": locale_ids_n, "ads": ads_data, "result": result},
         )
         return RedirectResponse(f"/dashboard/campaigns?created={saved.id}", status_code=303)
     except HTTPException as exc:
@@ -775,7 +816,7 @@ async def post_lang_wizard(request: Request, db: Session = Depends(get_db)):
             ad_account_id=act,
             campaign_type="language",
             result=result,
-            config={**form_config, "ads": ads_data, "result": result},
+            config={**form_config, "adset_locale_ids": adset_locale_ids, "ads": ads_data, "result": result},
         )
         return RedirectResponse(f"/dashboard/campaigns?created={saved.id}", status_code=303)
     except HTTPException as exc:
