@@ -464,6 +464,20 @@ table {
   font-size: 20px;
 }
 
+.token-config-toggle {
+  grid-column: 1 / -1;
+  width: min(1180px, calc(100% - 20px));
+  margin: 8px auto 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.token-config-toggle h3 {
+  margin-top: 0;
+}
+
 .users-table-wrap {
   border: 1px solid rgba(63, 110, 168, 0.45);
   border-radius: 14px;

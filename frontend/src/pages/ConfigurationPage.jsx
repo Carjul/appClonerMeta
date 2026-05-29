@@ -10,6 +10,8 @@ export default function ConfigurationPage() {
   const [form, setForm] = useState(initialForm);
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [configsLoaded, setConfigsLoaded] = useState(false);
+  const [showTokenConfig, setShowTokenConfig] = useState(false);
   const [usersLoading, setUsersLoading] = useState(false);
   const [error, setError] = useState("");
   const [usersError, setUsersError] = useState("");
@@ -20,6 +22,7 @@ export default function ConfigurationPage() {
     try {
       const rows = await api.listConfigs();
       setConfigs(rows);
+      setConfigsLoaded(true);
     } catch (e) {
       setError(String(e.message || e));
     } finally {
@@ -41,9 +44,13 @@ export default function ConfigurationPage() {
   }
 
   useEffect(() => {
-    load();
     loadUsers();
   }, []);
+
+  async function openTokenConfig() {
+    setShowTokenConfig(true);
+    if (!configsLoaded) await load();
+  }
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -111,6 +118,17 @@ export default function ConfigurationPage() {
 
   return (
     <div className="panel-grid">
+      <section className="panel token-config-toggle">
+        <div>
+          <h3>Tokens Meta</h3>
+          <p style={{ color: "#9ca3af", marginTop: 0 }}>Esta sección carga configuraciones/tokens solo cuando la abres manualmente.</p>
+        </div>
+        {!showTokenConfig ? (
+          <button className="btn btn-primary" type="button" onClick={openTokenConfig}>Cargar configuraciones Meta</button>
+        ) : null}
+      </section>
+
+      {showTokenConfig ? <>
       <section className="panel" style={{ margin:"10px" }}>
         <h3>{editing ? "Editar configuracion" : "Nueva configuracion"}</h3>
         <form onSubmit={onSubmit} className="form-grid">
@@ -162,6 +180,7 @@ export default function ConfigurationPage() {
           </table>
         </div>
       </section>
+      </> : null}
 
       <section className="panel users-admin-card">
         <h3>Usuarios</h3>
