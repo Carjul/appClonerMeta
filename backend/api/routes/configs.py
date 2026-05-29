@@ -6,6 +6,7 @@ from backend.api.schemas import ConfigCreate, ConfigUpdate
 from backend.api.utils import now_iso, oid, serialize_doc
 
 router = APIRouter(prefix="/api/configs", tags=["configs"])
+alias_router = APIRouter(prefix="/api/meta-settings", tags=["configs"])
 
 
 def _public_config(doc: dict) -> dict:
@@ -94,3 +95,12 @@ def test_config(config_id: str):
     if not ok:
         raise HTTPException(status_code=400, detail=updates["last_error"])
     return {"ok": True, "me": payload}
+
+
+# Alias sin la palabra "configs" para evitar reglas WAF/Cloudflare que bloqueen esa ruta.
+alias_router.add_api_route("", list_configs, methods=["GET"])
+alias_router.add_api_route("/{config_id}", get_config, methods=["GET"])
+alias_router.add_api_route("", create_config, methods=["POST"])
+alias_router.add_api_route("/{config_id}", update_config, methods=["PUT"])
+alias_router.add_api_route("/{config_id}", delete_config, methods=["DELETE"])
+alias_router.add_api_route("/{config_id}/test", test_config, methods=["POST"])

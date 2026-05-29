@@ -57,6 +57,7 @@ from backend.auth import (
 )
 
 # ── App B: routers API ────────────────────────────────────────────
+from backend.api.routes.configs       import alias_router as configs_alias_router
 from backend.api.routes.configs       import router as configs_router
 from backend.api.routes.daily_report  import router as daily_report_router
 from backend.api.routes.fb_catalog    import public_router as fb_catalog_public_router
@@ -355,7 +356,8 @@ def health():
 # ─────────────────────────────────────────────────────────────────
 # 2. ROUTERS APP B  —  /api/* y /feed/*
 # ─────────────────────────────────────────────────────────────────
-app.include_router(configs_router)            # /api/configs
+app.include_router(configs_router)            # /api/configs legacy
+app.include_router(configs_alias_router)      # /api/meta-settings
 app.include_router(daily_report_router)       # /api/daily-report
 app.include_router(fb_catalog_router)         # /api/fb-catalog
 app.include_router(fb_catalog_public_router)  # /feed/{slug}.csv

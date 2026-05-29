@@ -27,11 +27,11 @@ async function req(path, options = {}) {
 }
 
 export const api = {
-  listConfigs: () => req("/api/configs"),
-  createConfig: (data) => req("/api/configs", { method: "POST", body: JSON.stringify(data) }),
-  updateConfig: (id, data) => req(`/api/configs/${id}`, { method: "PUT", body: JSON.stringify(data) }),
-  deleteConfig: (id) => req(`/api/configs/${id}`, { method: "DELETE" }),
-  testConfig: (id) => req(`/api/configs/${id}/test`, { method: "POST" }),
+  listConfigs: () => req("/api/meta-settings"),
+  createConfig: (data) => req("/api/meta-settings", { method: "POST", body: JSON.stringify(data) }),
+  updateConfig: (id, data) => req(`/api/meta-settings/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteConfig: (id) => req(`/api/meta-settings/${id}`, { method: "DELETE" }),
+  testConfig: (id) => req(`/api/meta-settings/${id}/test`, { method: "POST" }),
   listUsers: () => req("/api/users"),
   updateUser: (id, data) => req(`/api/users/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
 
