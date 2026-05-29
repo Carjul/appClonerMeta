@@ -74,7 +74,7 @@ def update_user(user_id: str, payload: UserUpdate, request: Request):
     updates = {}
     if payload.role is not None:
         role = payload.role.strip()
-        if role not in {"Admin", "Cliente"}:
+        if role not in {"Admin", "SuperAdmin", "Cliente"}:
             raise HTTPException(status_code=400, detail="Invalid role")
         updates["Rol"] = role
     if payload.status is not None:

@@ -98,7 +98,8 @@ def current_user(request: Request) -> dict[str, Any] | None:
 
 
 def is_admin(user: dict[str, Any] | None) -> bool:
-    return ((user or {}).get("role") or "").strip().lower() == "admin"
+    role = ((user or {}).get("role") or "").strip().lower()
+    return role in {"admin", "superadmin", "super_admin", "super admin"}
 
 
 def is_client(user: dict[str, Any] | None) -> bool:
