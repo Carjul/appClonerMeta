@@ -32,6 +32,8 @@ export const api = {
   updateConfig: (id, data) => req(`/api/configs/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteConfig: (id) => req(`/api/configs/${id}`, { method: "DELETE" }),
   testConfig: (id) => req(`/api/configs/${id}/test`, { method: "POST" }),
+  listUsers: () => req("/api/users"),
+  updateUser: (id, data) => req(`/api/users/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
 
   runExplorer: (configId) => req("/api/explorer/run", { method: "POST", body: JSON.stringify({ configId }) }),
   getExplorerResult: (jobId) => req(`/api/explorer/${jobId}/result`),

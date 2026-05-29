@@ -6,10 +6,13 @@ const initialForm = { name: "", bmId: "", accessToken: "" };
 
 export default function ConfigurationPage() {
   const [configs, setConfigs] = useState([]);
+  const [users, setUsers] = useState([]);
   const [form, setForm] = useState(initialForm);
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [usersLoading, setUsersLoading] = useState(false);
   const [error, setError] = useState("");
+  const [usersError, setUsersError] = useState("");
 
   async function load() {
     setLoading(true);
@@ -24,8 +27,22 @@ export default function ConfigurationPage() {
     }
   }
 
+  async function loadUsers() {
+    setUsersLoading(true);
+    setUsersError("");
+    try {
+      const rows = await api.listUsers();
+      setUsers(rows);
+    } catch (e) {
+      setUsersError(String(e.message || e));
+    } finally {
+      setUsersLoading(false);
+    }
+  }
+
   useEffect(() => {
     load();
+    loadUsers();
   }, []);
 
   async function onSubmit(e) {
@@ -48,6 +65,21 @@ export default function ConfigurationPage() {
   function onEdit(row) {
     setEditing(row._id);
     setForm({ name: row.name || "", bmId: row.bm_id || "", accessToken: "" });
+  }
+
+  async function onUpdateUser(user) {
+    setUsersError("");
+    try {
+      await api.updateUser(user.id, { role: user.role, status: user.status });
+      await loadUsers();
+      await Swal.fire({ title: "Usuario actualizado", icon: "success", timer: 1200, showConfirmButton: false });
+    } catch (err) {
+      setUsersError(String(err.message || err));
+    }
+  }
+
+  function updateUserLocal(id, patch) {
+    setUsers((rows) => rows.map((u) => (u.id === id ? { ...u, ...patch } : u)));
   }
 
   async function onDelete(id) {
@@ -126,6 +158,55 @@ export default function ConfigurationPage() {
                   </td>
                 </tr>
               ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="panel" style={{ margin:"10px" }}>
+        <h3>Usuarios</h3>
+        <p style={{ color: "#9ca3af", marginTop: 0 }}>Administra estatus y rol. Las contraseñas no se muestran ni se editan aquí.</p>
+        {usersLoading ? <p>Cargando usuarios...</p> : null}
+        {usersError ? <p className="error">{usersError}</p> : null}
+        <div className="config-table-wrap">
+          <table className="config-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th>Rol</th>
+                <th>Status</th>
+                <th>Verificado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u) => (
+                <tr key={u.id}>
+                  <td>{u.name || "—"}</td>
+                  <td>{u.email || "—"}</td>
+                  <td>
+                    <select value={u.role || "Cliente"} onChange={(e) => updateUserLocal(u.id, { role: e.target.value })}>
+                      <option value="Cliente">Cliente</option>
+                      <option value="Admin">Admin</option>
+                      <option value="SuperAdmin">SuperAdmin</option>
+                    </select>
+                  </td>
+                  <td>
+                    <select value={u.status || "active"} onChange={(e) => updateUserLocal(u.id, { status: e.target.value })}>
+                      <option value="active">active</option>
+                      <option value="inactive">inactive</option>
+                    </select>
+                  </td>
+                  <td>{u.email_verified_at ? new Date(u.email_verified_at).toLocaleString() : "—"}</td>
+                  <td className="row-actions">
+                    <button className="btn btn-success" type="button" onClick={() => onUpdateUser(u)}>Guardar</button>
+                  </td>
+                </tr>
+              ))}
+              {!users.length && !usersLoading ? (
+                <tr><td colSpan="6">Sin usuarios.</td></tr>
+              ) : null}
             </tbody>
           </table>
         </div>

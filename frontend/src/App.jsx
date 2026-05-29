@@ -68,7 +68,7 @@ export default function App() {
         </div>
       </header>
       <main className="content">
-        {tab === "configs" ? <ConfigurationPage /> : tab === "fbCatalog" ? <FbCatalogModule /> : tab === "daily" ? <DailyReportPage /> : tab === "rules" ? <RulesEnginePage /> : <CampaignsPage />}
+        {tab === "configs" && authUser?.role === "SuperAdmin" ? <ConfigurationPage /> : tab === "fbCatalog" ? <FbCatalogModule /> : tab === "daily" ? <DailyReportPage /> : tab === "rules" ? <RulesEnginePage /> : <CampaignsPage />}
       </main>
     </div>
   );
