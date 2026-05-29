@@ -449,6 +449,41 @@ table {
   min-width: 620px;
 }
 
+.users-admin-card {
+  grid-column: 1 / -1;
+  width: min(1180px, calc(100% - 20px));
+  margin: 24px auto 10px;
+  padding: 22px;
+  background: linear-gradient(180deg, rgba(18, 40, 67, 0.98), rgba(15, 31, 52, 0.98));
+  border-color: #2f547f;
+  box-shadow: 0 18px 42px rgba(2, 10, 20, 0.55), inset 0 1px 0 rgba(117, 162, 226, 0.16);
+}
+
+.users-admin-card h3 {
+  margin-top: 0;
+  font-size: 20px;
+}
+
+.users-table-wrap {
+  border: 1px solid rgba(63, 110, 168, 0.45);
+  border-radius: 14px;
+  background: rgba(8, 17, 31, 0.38);
+}
+
+.users-table {
+  min-width: 940px;
+  margin-top: 0;
+}
+
+.users-table th,
+.users-table td {
+  padding: 12px 14px;
+}
+
+.users-table select {
+  min-width: 130px;
+}
+
 .jobs-table {
   min-width: 760px;
 }

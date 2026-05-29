@@ -163,13 +163,13 @@ export default function ConfigurationPage() {
         </div>
       </section>
 
-      <section className="panel" style={{ margin:"10px" }}>
+      <section className="panel users-admin-card">
         <h3>Usuarios</h3>
         <p style={{ color: "#9ca3af", marginTop: 0 }}>Administra estatus y rol. Las contraseñas no se muestran ni se editan aquí.</p>
         {usersLoading ? <p>Cargando usuarios...</p> : null}
         {usersError ? <p className="error">{usersError}</p> : null}
-        <div className="config-table-wrap">
-          <table className="config-table">
+        <div className="config-table-wrap users-table-wrap">
+          <table className="config-table users-table">
             <thead>
               <tr>
                 <th>Nombre</th>
