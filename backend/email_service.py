@@ -13,7 +13,7 @@ def _env(name: str, default: str = "") -> str:
 
 
 def app_base_url() -> str:
-    return _env("APP_BASE_URL", getattr(settings, "APP_URL", "http://localhost:8000")).rstrip("/")
+    return _env("PUBLIC_BASE_URL", getattr(settings, "APP_URL", "http://localhost:8000")).rstrip("/")
 
 
 def _email_shell(title: str, preheader: str, body_html: str, button_text: str, button_url: str) -> str:
