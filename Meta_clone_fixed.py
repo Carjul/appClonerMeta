@@ -803,6 +803,7 @@ def run_for_campaign(campaign_id):
                 slot_state = _ensure_slot_state(state, key)
 
             existing_meta_ads = []
+            expected_ads = len(cfg["original_ads"])
             with lock:
                 current_count = ad_counts.get(adset_id, 0)
             if current_count:
@@ -814,16 +815,50 @@ def run_for_campaign(campaign_id):
                         if unsaved_changes >= SAVE_INTERVAL:
                             save_state(state, state_file)
                             unsaved_changes = 0
-                    if _slot_completed(slot_state, len(cfg["original_ads"])):
+                    ad_counts[adset_id] = max(ad_counts.get(adset_id, 0), len(existing_meta_ads))
+                    if _slot_completed(slot_state, expected_ads):
                         total_skip += 1
                         print(f"  i={i:02d} SKIP completo (meta)")
                         return
+
+            with lock:
+                if ad_counts.get(adset_id, 0) >= expected_ads:
+                    total_guard += 1
+                    writer.writerow({
+                        "timestamp": ts,
+                        "i": i,
+                        "campaign_id": campaign_id,
+                        "adset_id": adset_id,
+                        "source_ad_id": "",
+                        "creative_id": "",
+                        "ad_id": "",
+                        "status": "GUARD_ADSET_LIMIT",
+                        "note": f"ads={ad_counts.get(adset_id, 0)}/{expected_ads}",
+                    })
+                    print(f"  i={i:02d} GUARD adset ya tiene {ad_counts.get(adset_id, 0)}/{expected_ads} ads")
+                    return
 
             slot_failed = False
             failed_seed_ad = None
             fail_msg = ""
             for seed_ad in cfg["original_ads"]:
                 with lock:
+                    if ad_counts.get(adset_id, 0) >= expected_ads:
+                        total_guard += 1
+                        writer.writerow({
+                            "timestamp": ts,
+                            "i": i,
+                            "campaign_id": campaign_id,
+                            "adset_id": adset_id,
+                            "source_ad_id": seed_ad.get("ad_id", ""),
+                            "creative_id": seed_ad.get("creative_id", ""),
+                            "ad_id": "",
+                            "status": "GUARD_ADSET_LIMIT",
+                            "note": f"ads={ad_counts.get(adset_id, 0)}/{expected_ads}",
+                        })
+                        print(f"  i={i:02d} GUARD adset lleno {ad_counts.get(adset_id, 0)}/{expected_ads}")
+                        return
+
                     slot_state = _ensure_slot_state(state, key)
                     slot_ads = slot_state["ads"]
                     ad_entry = next((item for item in slot_ads if item.get("source_ad_id") == seed_ad["ad_id"]), None)
@@ -872,6 +907,9 @@ def run_for_campaign(campaign_id):
                             ad_id = recovered_id
                             print(f"  i={i:02d} ad RECOVER {ad_id}")
                         else:
+                            if ad_counts.get(adset_id, 0) >= expected_ads:
+                                print(f"  i={i:02d} GUARD adset lleno tras recover {ad_counts.get(adset_id, 0)}/{expected_ads}")
+                                return
                             print(f"  i={i:02d} ERR_AD NET [{attempt}/{SLOT_RETRIES}] {msg[:80]}")
                             slot_failed = True
                             failed_seed_ad = seed_ad
