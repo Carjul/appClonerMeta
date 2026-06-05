@@ -40,7 +40,11 @@ export const api = {
   getExplorerCache: (configId) => req(`/api/explorer/cache/${configId}`),
 
   runBulk: (payload) => req("/api/clone/bulk", { method: "POST", body: JSON.stringify(payload) }),
-  runSingle: (configId, campaignIds, copiesToCreate = 49, adsPerAdset = 1) => req("/api/clone/single", { method: "POST", body: JSON.stringify({ configId, campaignIds, copiesToCreate, adsPerAdset }) }),
+  runSingle: (configId, campaignIds, copiesToCreate = 49, adsPerAdset = 1, campaignNames = {}) =>
+    req("/api/clone/single", {
+      method: "POST",
+      body: JSON.stringify({ configId, campaignIds, copiesToCreate, adsPerAdset, campaignNames }),
+    }),
   deleteCampaigns: (configId, campaignIds, batch = 10) => req("/api/delete/campaigns", { method: "POST", body: JSON.stringify({ configId, campaignIds, batch }) }),
   updateCampaignsStatus: (configId, campaignIds, status, apiVersion = "v21.0") => req("/api/campaigns/status", { method: "POST", body: JSON.stringify({ configId, campaignIds, status, apiVersion }) }),
   runReduceBudgets: (payload) => req("/api/budgets/reduce", { method: "POST", body: JSON.stringify(payload) }),

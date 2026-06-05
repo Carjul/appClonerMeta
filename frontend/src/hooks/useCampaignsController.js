@@ -376,8 +376,16 @@ export default function useCampaignsController() {
     await openLogs(res.jobId);
   }
 
+  function campaignNameById(campaignId) {
+    for (const account of accounts) {
+      const found = (account.campaigns || []).find((c) => c.id === campaignId);
+      if (found) return found.name || "";
+    }
+    return "";
+  }
+
   async function runBulk() {
-    if (!configId || !bulkCampaignId) return;
+    if (!configId) return;
     const copies = Number(bulkCopies);
     const startCopy = Number(bulkStartCopy);
     const adsetsPerCampaign = Number(bulkAdsetsPerCampaign);
@@ -398,9 +406,18 @@ export default function useCampaignsController() {
       setAlert({ type: "error", message: "Ads por adset debe ser un entero mayor a 0." });
       return;
     }
+
+    const selected = selectedIds.length > 0 ? selectedIds : bulkCampaignId ? [bulkCampaignId] : [];
+    if (selected.length === 0) {
+      setAlert({ type: "error", message: "Selecciona una campaña o ingresa un ID para bulk clone." });
+      return;
+    }
+
     const confirm = await Swal.fire({
       title: "Confirmar bulk clone",
-      text: `Se crearan ${copies} campanas desde #${startCopy}, con ${adsetsPerCampaign} adsets por campana y ${adsPerAdset} ads por adset.`,
+      text: selected.length > 1
+        ? `Se iniciaran ${selected.length} jobs (uno por campaña). Cada job creara ${copies} campañas desde #${startCopy}.`
+        : `Se crearan ${copies} campañas desde #${startCopy}, con ${adsetsPerCampaign} adsets por campaña y ${adsPerAdset} ads por adset.`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Si, duplicar",
@@ -409,20 +426,37 @@ export default function useCampaignsController() {
     if (!confirm.isConfirmed) return;
 
     setAlert(null);
-    const res = await api.runBulk({ configId, campaignId: bulkCampaignId, copies, startCopy, adsetsPerCampaign, adsPerAdset });
-    setSelectedJobId(res.jobId);
-    setJobLogs([]);
+    let firstJobId = null;
+    for (const campaignId of selected) {
+      const campaignName = campaignNameById(campaignId);
+      const res = await api.runBulk({
+        configId,
+        campaignId,
+        campaignName,
+        copies,
+        startCopy,
+        adsetsPerCampaign,
+        adsPerAdset,
+      });
+      if (!firstJobId) firstJobId = res.jobId;
+    }
 
     await Swal.fire({
       title: "Proceso iniciado",
-      text: "Bulk clone en ejecucion. Revisa el progreso en Jobs.",
+      text: selected.length > 1
+        ? `Bulk clone en ejecución para ${selected.length} campañas. Revisa el progreso en Jobs.`
+        : "Bulk clone en ejecución. Revisa el progreso en Jobs.",
       icon: "success",
       timer: 1600,
       showConfirmButton: false,
     });
 
     await loadJobs();
-    await openLogs(res.jobId);
+    if (firstJobId) {
+      setSelectedJobId(firstJobId);
+      setJobLogs([]);
+      await openLogs(firstJobId);
+    }
   }
 
   async function runReduceBudgets() {
@@ -498,7 +532,12 @@ export default function useCampaignsController() {
     if (!confirm.isConfirmed) return;
 
     setAlert(null);
-    const res = await api.runSingle(configId, selectedIds, copiesToCreate, adsPerAdset);
+    const campaignNames = selectedIds.reduce((acc, id) => {
+      const name = campaignNameById(id);
+      if (name) acc[id] = name;
+      return acc;
+    }, {});
+    const res = await api.runSingle(configId, selectedIds, copiesToCreate, adsPerAdset, campaignNames);
     setSelectedJobId(res.jobId);
     setJobLogs([]);
 

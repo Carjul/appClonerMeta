@@ -21,6 +21,7 @@ class ExplorerRunRequest(BaseModel):
 class BulkCloneRequest(BaseModel):
     configId: str
     campaignId: str
+    campaignName: Optional[str] = None
     copies: Optional[int] = 4
     startCopy: Optional[int] = 2
     adsetsPerCampaign: Optional[int] = 50
@@ -31,6 +32,7 @@ class BulkCloneRequest(BaseModel):
 class SingleCloneRequest(BaseModel):
     configId: str
     campaignIds: List[str]
+    campaignNames: Optional[Dict[str, str]] = None
     copiesToCreate: Optional[int] = 49
     adsPerAdset: Optional[int] = 1
 

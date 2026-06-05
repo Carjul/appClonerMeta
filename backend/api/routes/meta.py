@@ -90,6 +90,7 @@ def run_bulk_clone(payload: BulkCloneRequest):
         config_id=payload.configId,
         payload={
             "campaignId": payload.campaignId,
+            "campaignName": payload.campaignName,
             "copies": copies,
             "startCopy": start_copy,
             "adsetsPerCampaign": adsets_per_campaign,
@@ -123,6 +124,7 @@ def run_single_clone(payload: SingleCloneRequest):
         config_id=payload.configId,
         payload={
             "campaignIds": payload.campaignIds,
+            "campaignNames": payload.campaignNames,
             "copiesToCreate": copies_to_create,
             "adsPerAdset": ads_per_adset,
         },

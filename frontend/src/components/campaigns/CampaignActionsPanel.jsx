@@ -34,7 +34,7 @@ export default function CampaignActionsPanel({
             Bulk clone
             <span className="action-badge badge-bulk">BULK</span>
           </h4>
-          <input placeholder="Campaign ID origen" value={bulkCampaignId} onChange={(e) => onChangeBulkCampaignId(e.target.value)} />
+          <p>Seleccionadas: {selectedCount}</p>
           <label className="field-label">Campañas a crear</label>
           <input type="number" min="1" step="1" value={bulkCopies} onChange={(e) => onChangeBulkCopies(e.target.value)} required />
           <label className="field-label">Inicio #</label>

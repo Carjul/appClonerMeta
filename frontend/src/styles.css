@@ -499,15 +499,56 @@ table {
 }
 
 .jobs-table {
-  min-width: 760px;
+  min-width: 820px;
 }
 
 .jobs-table th:nth-child(4),
 .jobs-table td:nth-child(4) {
-  max-width: 210px;
+  max-width: 240px;
+}
+
+.job-campaign-name {
+  max-width: 260px;
+  overflow-x: auto;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.job-campaign-name::-webkit-scrollbar {
+  display: none;
+}
+
+.job-campaign-row {
+  white-space: nowrap;
+}
+
+.job-id-scroll {
+  max-width: 260px;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.job-id-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.job-id-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(31, 191, 117, 0.18);
+  border: 1px solid rgba(31, 191, 117, 0.55);
+  color: #b8f5cf;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .jobs-head {

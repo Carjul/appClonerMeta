@@ -9,13 +9,25 @@ function logClass(level, message) {
   return "log-line log-info";
 }
 
+function jobCampaignItems(job) {
+  const payload = job?.payload || {};
+  if (payload.campaignId) {
+    return [
+      {
+        id: payload.campaignId,
+        name: payload.campaignName || "-",
+      },
+    ];
+  }
+  if (Array.isArray(payload.campaignIds) && payload.campaignIds.length > 0) {
+    const names = payload.campaignNames || {};
+    return payload.campaignIds.map((id) => ({ id, name: names[id] || "-" }));
+  }
+  return [];
+}
+
 function jobTarget(job) {
   const payload = job?.payload || {};
-  if (payload.campaignId) return payload.campaignId;
-  if (Array.isArray(payload.campaignIds) && payload.campaignIds.length > 0) {
-    if (payload.campaignIds.length === 1) return payload.campaignIds[0];
-    return `${payload.campaignIds[0]} (+${payload.campaignIds.length - 1})`;
-  }
   if (payload.bmId) return `BM ${payload.bmId}`;
   if (payload.configId) return `CFG:${String(payload.configId).slice(-6)}`;
   if (payload.tokenConfigId) return `CFG:${String(payload.tokenConfigId).slice(-6)}`;
@@ -60,7 +72,8 @@ export default function JobsPanel({
               </th>
               <th>ID</th>
               <th>Tipo</th>
-              <th>Campaña/BM</th>
+              <th>Campaña</th>
+              <th>ID/BM</th>
               <th>Status</th>
               <th>Progreso</th>
               <th>Acciones</th>
@@ -74,7 +87,33 @@ export default function JobsPanel({
                 </td>
                 <td>{(j._id || "").slice(-8)}</td>
                 <td>{j.type}</td>
-                <td title={jobTarget(j)}>{jobTarget(j)}</td>
+                {jobCampaignItems(j).length > 0 ? (
+                  <>
+                    <td>
+                      <div className="job-campaign-name" title="Campañas seleccionadas">
+                        {jobCampaignItems(j).map((item) => (
+                          <div key={item.id} className="job-campaign-row" title={item.name}>
+                            {item.name}
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                    <td title="IDs de campañas">
+                      <div className="job-id-scroll">
+                        {jobCampaignItems(j).map((item) => (
+                          <span key={item.id} className="job-id-badge" title={item.id}>{item.id}</span>
+                        ))}
+                      </div>
+                    </td>
+                  </>
+                ) : (
+                  <>
+                    <td>-</td>
+                    <td title={jobTarget(j)}>
+                      <span className="job-id-badge">{jobTarget(j)}</span>
+                    </td>
+                  </>
+                )}
                 <td>{j.status}</td>
                 <td>
                   {j.progress ? (
