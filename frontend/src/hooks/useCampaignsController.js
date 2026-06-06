@@ -567,7 +567,12 @@ export default function useCampaignsController() {
 
     setAlert(null);
     const selectedNow = [...selectedIds];
-    const res = await api.deleteCampaigns(configId, selectedNow, 10);
+    const campaignNames = selectedNow.reduce((acc, id) => {
+      const name = campaignNameById(id);
+      if (name) acc[id] = name;
+      return acc;
+    }, {});
+    const res = await api.deleteCampaigns(configId, selectedNow, 10, campaignNames);
     setSelectedJobId(res.jobId);
     setJobLogs([]);
     setDeleteWatch((prev) => ({ ...prev, [res.jobId]: { campaignIds: selectedNow, applied: false } }));
@@ -597,7 +602,12 @@ export default function useCampaignsController() {
 
     setAlert(null);
     const selectedNow = [...selectedIds];
-    const res = await api.updateCampaignsStatus(configId, selectedNow, targetStatus, "v21.0");
+    const campaignNames = selectedNow.reduce((acc, id) => {
+      const name = campaignNameById(id);
+      if (name) acc[id] = name;
+      return acc;
+    }, {});
+    const res = await api.updateCampaignsStatus(configId, selectedNow, targetStatus, "v21.0", campaignNames);
     setSelectedJobId(res.jobId);
     setJobLogs([]);
     setStatusWatch((prev) => ({ ...prev, [res.jobId]: { campaignIds: selectedNow, status: targetStatus, applied: false } }));

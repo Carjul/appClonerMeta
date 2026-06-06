@@ -40,12 +40,14 @@ class SingleCloneRequest(BaseModel):
 class DeleteCampaignsRequest(BaseModel):
     configId: str
     campaignIds: List[str]
+    campaignNames: Optional[Dict[str, str]] = None
     batch: Optional[int] = 10
 
 
 class CampaignStatusRequest(BaseModel):
     configId: str
     campaignIds: List[str]
+    campaignNames: Optional[Dict[str, str]] = None
     status: str = Field(pattern="^(ACTIVE|PAUSED)$")
     apiVersion: Optional[str] = "v21.0"
 

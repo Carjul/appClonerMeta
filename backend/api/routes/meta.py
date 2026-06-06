@@ -142,7 +142,7 @@ def run_delete_campaigns(payload: DeleteCampaignsRequest):
     return create_job(
         job_type="delete_campaigns",
         config_id=payload.configId,
-        payload={"campaignIds": payload.campaignIds, "batch": payload.batch or 10},
+        payload={"campaignIds": payload.campaignIds, "campaignNames": payload.campaignNames, "batch": payload.batch or 10},
         cmd=cmd,
         artifacts=artifacts,
     )
@@ -166,7 +166,7 @@ def run_campaigns_status(payload: CampaignStatusRequest):
     return create_job(
         job_type="campaign_status",
         config_id=payload.configId,
-        payload={"campaignIds": payload.campaignIds, "status": status, "apiVersion": payload.apiVersion or "v21.0"},
+        payload={"campaignIds": payload.campaignIds, "campaignNames": payload.campaignNames, "status": status, "apiVersion": payload.apiVersion or "v21.0"},
         cmd=cmd,
         artifacts=artifacts,
     )

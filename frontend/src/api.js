@@ -45,8 +45,8 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ configId, campaignIds, copiesToCreate, adsPerAdset, campaignNames }),
     }),
-  deleteCampaigns: (configId, campaignIds, batch = 10) => req("/api/delete/campaigns", { method: "POST", body: JSON.stringify({ configId, campaignIds, batch }) }),
-  updateCampaignsStatus: (configId, campaignIds, status, apiVersion = "v21.0") => req("/api/campaigns/status", { method: "POST", body: JSON.stringify({ configId, campaignIds, status, apiVersion }) }),
+  deleteCampaigns: (configId, campaignIds, batch = 10, campaignNames = {}) => req("/api/delete/campaigns", { method: "POST", body: JSON.stringify({ configId, campaignIds, batch, campaignNames }) }),
+  updateCampaignsStatus: (configId, campaignIds, status, apiVersion = "v21.0", campaignNames = {}) => req("/api/campaigns/status", { method: "POST", body: JSON.stringify({ configId, campaignIds, status, apiVersion, campaignNames }) }),
   runReduceBudgets: (payload) => req("/api/budgets/reduce", { method: "POST", body: JSON.stringify(payload) }),
 
   fbSummary: (configId = "") => req(`/api/fb-catalog/summary${configId ? `?configId=${encodeURIComponent(configId)}` : ""}`),
