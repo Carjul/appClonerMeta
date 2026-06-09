@@ -82,6 +82,7 @@ from backend.api.services.scheduler import scheduler_state, start_scheduler, sto
 
 # ── App A: router Jinja2 ─────────────────────────────────────────
 from backend.dashboard.router import router as jinja_router
+from backend.dashboard.routers import feed as jinja_feed_router
 
 # ── Dashboard de métricas adjunto (Flask/WSGI) ───────────────────
 from backend.api.metrics_dashboard_pro import HTML as metrics_dashboard_html
@@ -170,6 +171,10 @@ def _is_public_asset(path: str) -> bool:
     return path.startswith("/assets/") or path.startswith("/static/")
 
 
+def _is_public_feed(path: str) -> bool:
+    return path.startswith("/feed/") and path.endswith(".csv")
+
+
 def _is_metrics_path(path: str) -> bool:
     return path == "/metricas" or path.startswith("/metricas/")
 
@@ -182,7 +187,7 @@ def _is_auth_api(path: str) -> bool:
 async def auth_middleware(request: Request, call_next):
     path = request.url.path
 
-    if path in PUBLIC_PATHS or _is_public_asset(path):
+    if path in PUBLIC_PATHS or _is_public_asset(path) or _is_public_feed(path):
         user = current_user(request)
         if path == "/login" and user:
             return RedirectResponse(url=landing_for(user), status_code=303)
@@ -360,7 +365,8 @@ app.include_router(configs_router)            # /api/configs legacy
 app.include_router(configs_alias_router)      # /api/meta-settings
 app.include_router(daily_report_router)       # /api/daily-report
 app.include_router(fb_catalog_router)         # /api/fb-catalog
-app.include_router(fb_catalog_public_router)  # /feed/{slug}.csv
+app.include_router(jinja_feed_router.router)  # /feed/{slug}.csv (CSV público App A/Jinja)
+app.include_router(fb_catalog_public_router)  # /feed/{slug}.csv fallback App B
 app.include_router(jobs_router)               # /api/jobs
 app.include_router(meta_router)               # /api/explorer /api/clone …
 app.include_router(rules_engine_router)       # /api/rules-engine
