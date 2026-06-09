@@ -908,6 +908,8 @@ def delete_catalog(catalog_id: str):
 def list_products(catalog_id: str):
     catalog = _catalog_or_404(catalog_id)
     rows = [serialize_doc(doc) for doc in fb_products_col.find({"catalog_id": catalog_id}).sort("created_at", 1)]
+    if not rows:
+        rows = _meta_catalog_products(catalog)
     return {"catalog": serialize_doc(catalog), "products": rows}
 
 
@@ -955,6 +957,8 @@ def delete_product(catalog_id: str, product_id: str):
 def list_sets(catalog_id: str):
     catalog = _catalog_or_404(catalog_id)
     products = [serialize_doc(doc) for doc in fb_products_col.find({"catalog_id": catalog_id}).sort("created_at", 1)]
+    if not products:
+        products = _meta_catalog_products(catalog)
     sets = [serialize_doc(doc) for doc in fb_product_sets_col.find({"catalog_id": catalog_id}).sort("created_at", -1)]
     return {"catalog": serialize_doc(catalog), "sets": sets, "products": products}
 
@@ -1379,15 +1383,50 @@ def trick_run_now(configId: str | None = None):
     return {"ok": True, "updated": updated}
 
 
-def _feed_response(slug: str) -> Response:
-    catalog = fb_catalogs_col.find_one({"feed_slug": slug})
-    if not catalog:
-        raise HTTPException(status_code=404, detail="Feed not found")
-    products = fb_products_col.find({"catalog_id": str(catalog["_id"])})
+def _meta_catalog_products(catalog: dict, limit: int = 500) -> list[dict]:
+    fb_catalog_id = str(catalog.get("fb_catalog_id") or "")
+    if not fb_catalog_id or fb_catalog_id.startswith("local-"):
+        return []
+    try:
+        token = _token_for_config(catalog.get("config_id"))
+    except HTTPException:
+        return []
+
+    rows = []
+    after = None
+    fields = "id,retailer_id,name,description,availability,condition,price,url,image_url,brand"
+    while len(rows) < limit:
+        params = {"fields": fields, "limit": min(100, limit - len(rows))}
+        if after:
+            params["after"] = after
+        payload = _meta_get_safe(f"{fb_catalog_id}/products", token, params)
+        for item in payload.get("data", []) or []:
+            retailer_id = item.get("retailer_id") or item.get("id") or ""
+            rows.append({
+                "retailer_id": retailer_id,
+                "title": item.get("name") or retailer_id,
+                "description": item.get("description") or item.get("name") or retailer_id,
+                "availability": item.get("availability") or "in stock",
+                "condition": item.get("condition") or "new",
+                "price": item.get("price") or "10.00 USD",
+                "link": item.get("url") or "",
+                "image_link": item.get("image_url") or "",
+                "brand": item.get("brand") or "Brand",
+                "video_url": "",
+                "tag": "dirty",
+                "source": "meta_portfolio",
+            })
+        after = ((payload.get("paging") or {}).get("cursors") or {}).get("after")
+        if not after or not payload.get("data"):
+            break
+    return rows
+
+
+def _csv_response(rows: list[dict], status_code: int = 200) -> Response:
     buf = io.StringIO()
     writer = csv.writer(buf)
     writer.writerow(FEED_COLS)
-    for product in products:
+    for product in rows:
         writer.writerow([
             product.get("retailer_id", ""),
             product.get("title", ""),
@@ -1400,7 +1439,17 @@ def _feed_response(slug: str) -> Response:
             product.get("brand", "Brand"),
             product.get("video_url", ""),
         ])
-    return Response(content=buf.getvalue(), media_type="text/csv; charset=utf-8")
+    return Response(content=buf.getvalue(), media_type="text/csv; charset=utf-8", status_code=status_code)
+
+
+def _feed_response(slug: str) -> Response:
+    catalog = fb_catalogs_col.find_one({"feed_slug": slug})
+    if not catalog:
+        return _csv_response([], status_code=404)
+    products = list(fb_products_col.find({"catalog_id": str(catalog["_id"])}))
+    if not products:
+        products = _meta_catalog_products(catalog)
+    return _csv_response(products)
 
 
 @router.get("/feed/{slug}.csv")
