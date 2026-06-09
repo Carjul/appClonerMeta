@@ -434,9 +434,10 @@ function CatalogCreatePage({ configId, activeConfig, setupOptions, reload, onGo,
   async function create(e) {
     e.preventDefault();
     try {
-      await api.fbCreateCatalog({ ...form, configId });
+      const created = await api.fbCreateCatalog({ ...form, configId });
       setForm({ name: "", businessId: activeConfig?.bm_id || "", pixelId: "", syncToMeta: false });
-      setAlert({ type: "success", message: "Catalogo creado." });
+      const warnings = (created?.warnings || []).map((item) => `${item.step}: ${typeof item.detail === "string" ? item.detail : item.detail?.message || JSON.stringify(item.detail)}`).join(" | ");
+      setAlert({ type: warnings ? "warning" : "success", message: warnings ? `Catalogo creado con advertencias: ${warnings}` : "Catalogo creado." });
       await reload();
       onGo("catalogs");
     } catch (err) {

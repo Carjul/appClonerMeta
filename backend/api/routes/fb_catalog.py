@@ -26,6 +26,7 @@ from backend.api.db import (
 )
 from backend.api.services.fb_catalog_notifications import notify_fb_catalog
 from backend.api.utils import now_iso, oid, serialize_doc
+from backend.core.config import settings
 
 
 router = APIRouter(prefix="/api/fb-catalog", tags=["fb-catalog"])
@@ -239,15 +240,28 @@ def _token_for_config(config_id: str | None) -> str:
     return token
 
 
+def _meta_error_detail(payload: Any) -> Any:
+    if not isinstance(payload, dict):
+        return payload
+    err = payload.get("error")
+    if not isinstance(err, dict):
+        return payload
+    message = err.get("error_user_msg") or err.get("message") or "Meta API error"
+    detail = {"message": message}
+    for key in ("code", "error_subcode", "type", "fbtrace_id"):
+        if err.get(key) is not None:
+            detail[key] = err.get(key)
+    return detail
+
+
 def _meta_post(path: str, token: str, data: dict) -> dict:
     res = requests.post(f"{GRAPH}/{path.lstrip('/')}", params={"access_token": token}, data=data, timeout=60)
     try:
         payload = res.json()
     except ValueError:
         payload = {"error": {"message": res.text[:300]}}
-    if res.status_code >= 400 or payload.get("error"):
-        err = payload.get("error", {}) if isinstance(payload, dict) else {}
-        raise HTTPException(status_code=400, detail=err.get("error_user_msg") or err.get("message") or payload)
+    if res.status_code >= 400 or (isinstance(payload, dict) and payload.get("error")):
+        raise HTTPException(status_code=400, detail=_meta_error_detail(payload))
     return payload
 
 
@@ -257,9 +271,8 @@ def _meta_get(path: str, token: str, params: dict | None = None) -> dict:
         payload = res.json()
     except ValueError:
         payload = {"error": {"message": res.text[:300]}}
-    if res.status_code >= 400 or payload.get("error"):
-        err = payload.get("error", {}) if isinstance(payload, dict) else {}
-        raise HTTPException(status_code=400, detail=err.get("error_user_msg") or err.get("message") or payload)
+    if res.status_code >= 400 or (isinstance(payload, dict) and payload.get("error")):
+        raise HTTPException(status_code=400, detail=_meta_error_detail(payload))
     return payload
 
 
@@ -384,7 +397,7 @@ def _catalog_or_404(catalog_id: str) -> dict:
 
 
 def _public_base(request: Request) -> str:
-    return str(request.base_url).rstrip("/")
+    return (os.getenv("PUBLIC_BASE_URL") or settings.APP_URL or str(request.base_url)).rstrip("/")
 
 
 def _build_set_name(products: list[dict]) -> str:
@@ -841,20 +854,29 @@ def create_catalog(payload: CatalogCreate, request: Request):
         raise HTTPException(status_code=400, detail="Business Manager is required to sync with Meta")
 
     feed_slug = secrets.token_urlsafe(8)
+    feed_url = f"{_public_base(request)}/feed/{feed_slug}.csv"
     fb_catalog_id = f"local-{feed_slug}"
     fb_feed_id = None
+    warnings = []
     if payload.syncToMeta:
         token = _token_for_config(payload.configId)
         catalog_res = _meta_post(f"{business_id}/owned_product_catalogs", token, {"name": payload.name, "vertical": "commerce"})
         fb_catalog_id = catalog_res["id"]
         if payload.pixelId:
-            _meta_post(f"{fb_catalog_id}/external_event_sources", token, {"external_event_sources": f'["{payload.pixelId}"]'})
-        feed_res = _meta_post(
-            f"{fb_catalog_id}/product_feeds",
-            token,
-            {"name": f"Feed {payload.name}", "schedule": f'{{"interval":"DAILY","url":"{_public_base(request)}/feed/{feed_slug}.csv","hour":4}}'},
-        )
-        fb_feed_id = feed_res.get("id")
+            try:
+                _meta_post(f"{fb_catalog_id}/external_event_sources", token, {"external_event_sources": json.dumps([payload.pixelId])})
+            except HTTPException as exc:
+                warnings.append({"step": "attach_pixel", "detail": exc.detail})
+        schedule = json.dumps({"interval": "DAILY", "url": feed_url, "hour": "4"})
+        try:
+            feed_res = _meta_post(
+                f"{fb_catalog_id}/product_feeds",
+                token,
+                {"name": f"Feed {payload.name}", "schedule": schedule},
+            )
+            fb_feed_id = feed_res.get("id")
+        except HTTPException as exc:
+            warnings.append({"step": "create_feed", "detail": exc.detail})
 
     doc = {
         "config_id": payload.configId,
@@ -867,7 +889,10 @@ def create_catalog(payload: CatalogCreate, request: Request):
         "updated_at": now_iso(),
     }
     res = fb_catalogs_col.insert_one(doc)
-    return serialize_doc({**doc, "_id": res.inserted_id, "feedUrl": f"{_public_base(request)}/feed/{feed_slug}.csv"})
+    response = serialize_doc({**doc, "_id": res.inserted_id, "feedUrl": feed_url})
+    if warnings:
+        response["warnings"] = warnings
+    return response
 
 
 @router.delete("/catalogs/{catalog_id}")
