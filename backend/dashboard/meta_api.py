@@ -137,9 +137,13 @@ def attach_pixel_to_catalog(catalog_id: str, pixel_id: str, token: Optional[str]
 
 
 def create_feed(catalog_id: str, name: str, csv_url: str, token: Optional[str] = None) -> dict:
-    schedule = {"interval": "DAILY", "url": csv_url, "hour": 4}
+    schedule = {"interval": "DAILY", "url": csv_url, "hour": "4"}
     return post(f"{catalog_id}/product_feeds",
                 {"name": name, "schedule": json.dumps(schedule)}, token)
+
+
+def upload_feed(feed_id: str, csv_url: str, token: Optional[str] = None) -> dict:
+    return post(f"{feed_id}/uploads", {"url": csv_url}, token)
 
 
 def create_product_set(catalog_id: str, name: str, retailer_ids: List[str], token: Optional[str] = None) -> dict:

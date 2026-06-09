@@ -1,7 +1,10 @@
 from fastapi import APIRouter, Depends, Request, Form, HTTPException
 from fastapi.responses import RedirectResponse
 from typing import Any as Session
+from urllib.parse import urlencode
 
+from .. import meta_api
+from ..config import PUBLIC_BASE_URL
 from ..database import get_db
 from ..models import Catalog, Product
 
@@ -58,7 +61,27 @@ async def bulk_save(cat_id: int, request: Request, db: Session = Depends(get_db)
         else:
             db.add(Product(**data))
     db.commit()
-    return RedirectResponse(f"/dashboard/catalogs/{cat_id}/products?saved=1", status_code=303)
+    db.refresh(cat)
+
+    query = {"saved": "1"}
+    csv_url = f"{PUBLIC_BASE_URL}/feed/{cat.feed_slug}.csv"
+    if cat.fb_catalog_id and not str(cat.fb_catalog_id).startswith("local-"):
+        try:
+            if not cat.fb_feed_id:
+                feed_res = meta_api.create_feed(cat.fb_catalog_id, f"Feed {cat.name}", csv_url)
+                cat.fb_feed_id = feed_res.get("id")
+                db.commit()
+            if cat.fb_feed_id:
+                meta_api.upload_feed(cat.fb_feed_id, csv_url)
+                query["uploaded"] = "1"
+            else:
+                query["upload_error"] = "Meta no devolvió Product Feed ID"
+        except Exception as e:
+            query["upload_error"] = str(e)[:500]
+    else:
+        query["local_only"] = "1"
+
+    return RedirectResponse(f"/dashboard/catalogs/{cat_id}/products?{urlencode(query)}", status_code=303)
 
 
 @router.post("/catalogs/{cat_id}/products/{prod_id}/delete")

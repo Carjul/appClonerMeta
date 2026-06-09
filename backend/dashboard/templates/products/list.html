@@ -15,6 +15,16 @@
 </div>
 <p class="text-muted text-sm mb-4">Catálogo: <code>{{ catalog.name }}</code> • Feed CSV: <code class="text-xs">/feed/{{ catalog.feed_slug }}.csv</code></p>
 
+{% if request.query_params.get('uploaded') %}
+  <div class="mb-4 rounded border border-green-500/40 bg-green-500/10 px-4 py-3 text-sm text-green-200">Productos guardados y CSV enviado a Meta correctamente.</div>
+{% elif request.query_params.get('upload_error') %}
+  <div class="mb-4 rounded border border-yellow-500/40 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-100">Productos guardados, pero Meta no pudo subir el CSV: {{ request.query_params.get('upload_error') }}</div>
+{% elif request.query_params.get('local_only') %}
+  <div class="mb-4 rounded border border-blue-500/40 bg-blue-500/10 px-4 py-3 text-sm text-blue-100">Productos guardados. Este catálogo es local; el CSV queda disponible en la URL del feed.</div>
+{% elif request.query_params.get('saved') %}
+  <div class="mb-4 rounded border border-green-500/40 bg-green-500/10 px-4 py-3 text-sm text-green-200">Productos guardados.</div>
+{% endif %}
+
 <form method="post" action="/dashboard/catalogs/{{ catalog.id }}/products/bulk" class="bg-panel border border-border rounded-lg overflow-x-auto">
   <table class="w-full text-xs" id="products-table">
     <thead class="bg-bg border-b border-border">
@@ -88,7 +98,7 @@
     <input spellcheck="false" type="hidden" name="row_count" id="row_count" value="{{ products|length }}">
     <button type="button" onclick="addRow()" class="bg-panel border border-border hover:bg-border px-3 py-2 rounded text-sm flex items-center gap-2">{{ icon('plus') }}<span data-i18n="btn.add_row">Agregar fila</span></button>
     <button type="submit" class="bg-accent hover:bg-accent/80 text-white px-4 py-2 rounded text-sm flex items-center gap-2">{{ icon('save') }}<span data-i18n="btn.save_all">Guardar todo</span></button>
-    {{ tip("Los cambios se guardan localmente en este dashboard. Para que Meta vea los cambios, el feed se refresca según la programación (diariamente) o desde Commerce Manager → Actualizar ahora.") }}
+    {{ tip("Al guardar, el dashboard actualiza el CSV público y, si el catálogo está sincronizado con Meta, intenta subirlo inmediatamente al Product Feed.") }}
   </div>
   <div class="px-4 pb-4">
     <a href="/dashboard/catalogs" class="text-accent text-sm inline-flex items-center gap-1">{{ icon('arrow-left') }}<span data-i18n="btn.back_to_catalogs">Volver a catálogos</span></a>

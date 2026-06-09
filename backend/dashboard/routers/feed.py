@@ -1,7 +1,7 @@
 """Sirve el CSV público que Meta consulta como product feed."""
 import csv
 import io
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from fastapi.responses import Response
 from typing import Any as Session
 
@@ -17,9 +17,7 @@ COLS = ["id", "title", "description", "availability", "condition", "price",
 @router.get("/feed/{slug}.csv")
 def serve_feed(slug: str, db: Session = Depends(get_db)):
     cat = db.query(Catalog).filter(Catalog.feed_slug == slug).first()
-    if not cat:
-        raise HTTPException(404)
-    products = db.query(Product).filter(Product.catalog_id == cat.id).all()
+    products = db.query(Product).filter(Product.catalog_id == cat.id).all() if cat else []
 
     buf = io.StringIO()
     w = csv.writer(buf)
@@ -30,4 +28,4 @@ def serve_feed(slug: str, db: Session = Depends(get_db)):
             p.price, p.link, p.image_link, p.brand, p.video_url or "",
         ])
 
-    return Response(content=buf.getvalue(), media_type="text/csv; charset=utf-8")
+    return Response(content=buf.getvalue(), media_type="text/csv; charset=utf-8", status_code=200 if cat else 404)
