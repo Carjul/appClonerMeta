@@ -26,24 +26,20 @@ sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="repla
 LOG_FORMAT = "%(asctime)s [%(levelname)s] %(message)s"
 logging.basicConfig(level=logging.DEBUG, format=LOG_FORMAT, stream=sys.stdout)
 logger = logging.getLogger("meta_clone")
-# Evita que urllib3 imprima la URL completa con access_token en DEBUG.
-logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 
 # ── RATE LIMIT MANAGER (Token Bucket) ──────────────────────────────────────
 class RateLimitManager:
-    """Gestor de rate limit para Meta API (token bucket)."""
+    """Gestor de rate limit para Meta API (token bucket)"""
     def __init__(self, calls_per_minute=200):
         self.calls_per_minute = calls_per_minute
-        # Sin burst inicial: evita 4-5 workers disparando todos al arrancar.
-        self.tokens = 0
+        self.tokens = calls_per_minute
         self.last_refill = time.time()
         self.lock = threading.Lock()
         self.min_interval = 60.0 / calls_per_minute
 
     def acquire(self, tokens=1):
-        """Esperar hasta tener tokens disponibles."""
-        _wait_global_rate_pause()
+        """Esperar hasta tener tokens disponibles"""
         while True:
             with self.lock:
                 now = time.time()
@@ -57,40 +53,8 @@ class RateLimitManager:
             time.sleep(self.min_interval)
 
 
-_RATE_PAUSE_LOCK = threading.Lock()
-_RATE_PAUSE_UNTIL = 0.0
-
-
-def _wait_global_rate_pause():
-    """Pausa global compartida por todos los workers cuando Meta dice code=17."""
-    while True:
-        with _RATE_PAUSE_LOCK:
-            wait = _RATE_PAUSE_UNTIL - time.time()
-        if wait <= 0:
-            return
-        logger.warning("GLOBAL_RATE_PAUSE: esperando %.1fs antes de seguir", wait)
-        time.sleep(min(wait, 10.0))
-
-
-def _trigger_global_rate_pause(seconds: int, reason: str):
-    global _RATE_PAUSE_UNTIL
-    until = time.time() + seconds
-    with _RATE_PAUSE_LOCK:
-        _RATE_PAUSE_UNTIL = max(_RATE_PAUSE_UNTIL, until)
-    logger.warning("GLOBAL_RATE_PAUSE: %ss por %s", seconds, reason)
-
-
-def _sanitize_url(url: str | None) -> str:
-    if not url:
-        return "?"
-    if "access_token=" not in url:
-        return url[:200]
-    prefix = url.split("access_token=", 1)[0]
-    return (prefix + "access_token=***")[:200]
-
-
-# Rate limiter preventivo. 60/min reduce bloqueos por ad account en ejecuciones grandes.
-RATE_LIMITER = RateLimitManager(calls_per_minute=60)
+# Inicializar rate limiter (conservador: 150/min)
+RATE_LIMITER = RateLimitManager(calls_per_minute=150)
 
 
 def _log_http_response(tag: str, r: requests.Response, truncate: int = 500):
@@ -99,7 +63,7 @@ def _log_http_response(tag: str, r: requests.Response, truncate: int = 500):
         "HTTP %s | %s %s | status=%d | content-length=%s | x-fb-trace-id=%s | x-fb-rev=%s",
         tag,
         r.request.method,
-        _sanitize_url(r.request.url),
+        r.request.url[:200] if r.request.url else "?",
         r.status_code,
         r.headers.get("Content-Length", "?"),
         r.headers.get("x-fb-trace-id", "n/a"),
@@ -211,11 +175,11 @@ ADS_PER_ADSET = int(_args.ads_per_adset)
 CAMPAIGN_ADSET_LIMIT = int(_args.campaign_adset_limit) if int(_args.campaign_adset_limit) > 0 else COPIES_TO_CREATE + 1
 MULTI_ADVERTISER_ADS = False
 
-SLEEP_BETWEEN = 1.0
-TRANSIENT_SLEEP = 5.0
-TRANSIENT_RETRIES = 5
+SLEEP_BETWEEN = 0.6
+TRANSIENT_SLEEP = 3.0
+TRANSIENT_RETRIES = 4
 SAVE_INTERVAL = 10
-MAX_WORKERS = 3
+MAX_WORKERS = 5
 SLOT_RETRIES = 5  # reintentos por slot ante errores de red o transitorios
 
 LOG_DIR = "logs"
@@ -236,10 +200,6 @@ SEED_FIELDS = "name,adsets.limit(100){id,name},ads.limit(100){id,name,adset_id,c
 
 def _is_rate_limit(err):
     return err.get("code", 0) in (4, 17, 32, 613)
-
-
-def _is_ad_account_rate_limit(err):
-    return err.get("code") == 17 or err.get("error_subcode") == 2446079
 
 
 def _is_transient(err):
@@ -393,30 +353,18 @@ def api_batch(sub_requests):
                 continue
             raise RuntimeError(f"Batch error: {err.get('message')}")
 
-        # Log cada sub-respuesta del batch y pausa global si Meta limita la cuenta.
-        should_retry_batch = False
+        # Log cada sub-respuesta del batch
         for idx, item in enumerate(results):
             code = item.get("code", 0)
             body = json.loads(item.get("body", "{}"))
-            err = body.get("error", {}) if isinstance(body, dict) else {}
             if code != 200:
                 logger.warning(
                     "BATCH sub[%d] HTTP %d | url=%s | error=%s",
                     idx, code, urls_summary[idx] if idx < len(urls_summary) else "?",
-                    json.dumps(err, ensure_ascii=False)[:300],
+                    json.dumps(body.get("error", {}), ensure_ascii=False)[:300],
                 )
-                if _is_ad_account_rate_limit(err):
-                    _trigger_global_rate_pause(90, "batch code=17 ad-account limit")
-                    should_retry_batch = True
-                elif _is_rate_limit(err):
-                    _trigger_global_rate_pause(45, f"batch rate limit code={err.get('code')}")
-                    should_retry_batch = True
             else:
                 logger.debug("BATCH sub[%d] HTTP 200 OK | url=%s", idx, urls_summary[idx] if idx < len(urls_summary) else "?")
-
-        if should_retry_batch:
-            attempt += 1
-            continue
 
         return [{"code": item.get("code", 0), "body": json.loads(item.get("body", "{}"))} for item in results]
 
@@ -456,11 +404,7 @@ def api_post(endpoint, payload):
         _log_api_error(f"POST({endpoint})", err)
 
         if _is_rate_limit(err) or r.status_code >= 500:
-            if _is_ad_account_rate_limit(err):
-                wait = 90
-                _trigger_global_rate_pause(wait, "post code=17 ad-account limit")
-            else:
-                wait = min(2 ** rl_attempt * 2, 120)
+            wait = min(2 ** rl_attempt * 2, 120)
             logger.warning("POST %s | rate-limit/5xx, retry in %ds (rl_attempt=%d)", endpoint, wait, rl_attempt)
             time.sleep(wait)
             rl_attempt += 1
@@ -879,7 +823,6 @@ def run_for_campaign(campaign_id):
                 slot_state = _ensure_slot_state(state, key)
                 adset_id = slot_state.get("adset_id")
 
-            adset_created_now = False
             if not adset_id:
                 # Construir payload con programaci\u00f3n original si existe
                 adset_payload = {**cfg["adset_base"], "campaign_id": campaign_id, "name": cfg["adset_name"]}
@@ -896,6 +839,9 @@ def run_for_campaign(campaign_id):
                     msg = err.get("message", "")
                     print(f"  i={i:02d} ERR_ADSET [{attempt}/{SLOT_RETRIES}] {msg[:80]}")
                     if attempt < SLOT_RETRIES:
+                        if check_adset_full(adset_id, key, ts, "retry-after-ad-error"):
+                            print(f"  i={i:02d} GUARD adset lleno antes de reintento {ad_counts.get(adset_id, 0)}/{expected_ads}")
+                            return
                         time.sleep(TRANSIENT_SLEEP * attempt)
                         continue
                     with lock:
@@ -914,29 +860,22 @@ def run_for_campaign(campaign_id):
                     if unsaved_changes >= SAVE_INTERVAL:
                         save_state(state, state_file)
                         unsaved_changes = 0
-                adset_created_now = True
                 time.sleep(SLEEP_BETWEEN)
 
-            # Guard B — solo hacer RECOVER para adsets previos/incompletos.
-            # Si el adset acaba de crearse, sabemos que no tiene ads y evitamos llamadas extra.
-            did_recover_check = False
-            if not adset_created_now:
-                with lock:
-                    slot_state = _ensure_slot_state(state, key)
+            # Guard B — adset ya completo en Meta aunque el state no se haya guardado bien
+            with lock:
+                slot_state = _ensure_slot_state(state, key)
 
-                did_recover_check = True
-                if check_adset_full(adset_id, key, ts, "preflight"):
-                    total_skip += 1
-                    print(f"  i={i:02d} SKIP completo (meta)")
-                    return
+            if check_adset_full(adset_id, key, ts, "preflight"):
+                total_skip += 1
+                print(f"  i={i:02d} SKIP completo (meta)")
+                return
 
             slot_failed = False
             failed_seed_ad = None
             fail_msg = ""
             for seed_ad in cfg["original_ads"]:
-                # Evitar RECOVER repetido en adsets recien creados. Para adsets del state
-                # anterior, una verificacion antes de crear ayuda a no duplicar.
-                if not adset_created_now and not did_recover_check and check_adset_full(adset_id, key, ts, "before-create"):
+                if check_adset_full(adset_id, key, ts, "before-create"):
                     print(f"  i={i:02d} GUARD adset lleno {ad_counts.get(adset_id, 0)}/{expected_ads}")
                     return
 
