@@ -38,12 +38,6 @@ class RateLimitManager:
         self.lock = threading.Lock()
         self.min_interval = 60.0 / calls_per_minute
 
-    def set_rate(self, calls_per_minute):
-        with self.lock:
-            self.calls_per_minute = calls_per_minute
-            self.tokens = min(self.tokens, calls_per_minute)
-            self.min_interval = 60.0 / calls_per_minute
-
     def acquire(self, tokens=1):
         """Esperar hasta tener tokens disponibles"""
         while True:
@@ -107,8 +101,6 @@ _parser.add_argument("--access-token", required=True, help="Access token de Meta
 _parser.add_argument("--copies-to-create", type=int, default=49, help="Cantidad de copias adicionales por campana")
 _parser.add_argument("--ads-per-adset", type=int, default=1, help="Cantidad de ads a clonar dentro de cada adset nuevo")
 _parser.add_argument("--campaign-adset-limit", type=int, default=0, help="Limite de adsets por campana (0 = copies+1)")
-_parser.add_argument("--safe-mode", choices=["auto", "on", "off"], default="auto", help="Modo seguro para creatives pesados/multi-idioma: auto, on u off")
-_parser.add_argument("--safe-run-limit", type=int, default=8, help="Maximo de slots pendientes por ejecucion en modo seguro (0 = sin limite)")
 _args = _parser.parse_args()
 
 ACCESS_TOKEN = _args.access_token
@@ -189,7 +181,6 @@ TRANSIENT_RETRIES = 4
 SAVE_INTERVAL = 10
 MAX_WORKERS = 5
 SLOT_RETRIES = 5  # reintentos por slot ante errores de red o transitorios
-SAFE_RUN_LIMIT = int(_args.safe_run_limit)
 
 LOG_DIR = "logs"
 os.makedirs(LOG_DIR, exist_ok=True)
@@ -544,49 +535,6 @@ def clean_creative_spec(raw):
     return result
 
 
-def _creative_variant_count(cfg: dict) -> int:
-    """Estima peso multi-idioma del creative por cantidad de assets/textos."""
-    spec = cfg.get("cr_spec") or {}
-    afs = spec.get("asset_feed_spec") or {}
-    counts = []
-    for key in ("bodies", "titles", "descriptions", "link_urls", "call_to_action_types"):
-        value = afs.get(key)
-        if isinstance(value, list):
-            counts.append(len(value))
-    for key in ("images", "videos"):
-        value = afs.get(key)
-        if isinstance(value, list):
-            counts.append(len(value))
-    locales = ((cfg.get("adset_base") or {}).get("targeting") or {}).get("locales")
-    if isinstance(locales, list):
-        counts.append(len(locales))
-    return max(counts or [0])
-
-
-def _configure_execution_mode(cfg: dict, state: dict):
-    """Activa modo seguro para creatives grandes (ej. 32 idiomas)."""
-    global SLEEP_BETWEEN, TRANSIENT_SLEEP, TRANSIENT_RETRIES, MAX_WORKERS, SLOT_RETRIES
-    variant_count = _creative_variant_count(cfg)
-    safe = _args.safe_mode == "on" or (_args.safe_mode == "auto" and variant_count >= 25)
-    if safe:
-        SLEEP_BETWEEN = 3.0
-        TRANSIENT_SLEEP = 15.0
-        TRANSIENT_RETRIES = 6
-        MAX_WORKERS = 1
-        SLOT_RETRIES = 6
-        RATE_LIMITER.set_rate(25)
-        mode = "SAFE"
-    else:
-        RATE_LIMITER.set_rate(150)
-        mode = "FAST"
-    pending = [i for i in range(1, COPIES_TO_CREATE + 1) if not _slot_completed(state.get(sk_adset(i), {}), len(cfg["original_ads"]))]
-    if safe and SAFE_RUN_LIMIT > 0:
-        slots = pending[:SAFE_RUN_LIMIT]
-    else:
-        slots = pending
-    return mode, variant_count, slots
-
-
 def clean_adset_payload(adset):
     payload = copy.deepcopy(adset)
 
@@ -783,17 +731,11 @@ def run_for_campaign(campaign_id):
     print(f"  Objetivo    : crear {COPIES_TO_CREATE} copias adicionales")
     print(f"  Ads por set : {ADS_PER_ADSET}")
     print(f"  Limite set  : {CAMPAIGN_ADSET_LIMIT} adsets por campana")
+    print(f"  Workers     : {MAX_WORKERS}")
     print(f"  Multi-ad    : {'DESACTIVADO' if not MULTI_ADVERTISER_ADS else 'activado'}")
 
     cfg = fetch_initial_config(campaign_id)
     state = load_state(state_file)
-    exec_mode, variant_count, slots_to_process = _configure_execution_mode(cfg, state)
-    print(f"  Modo        : {exec_mode} (creative_variants={variant_count})")
-    print(f"  Workers     : {MAX_WORKERS}")
-    print(f"  Rate limit  : {RATE_LIMITER.calls_per_minute}/min")
-    print(f"  Sleep       : {SLEEP_BETWEEN}s | transient={TRANSIENT_SLEEP}s | retries={SLOT_RETRIES}")
-    if exec_mode == "SAFE" and SAFE_RUN_LIMIT > 0:
-        print(f"  Tanda segura: {len(slots_to_process)} pendientes en esta ejecucion (limite={SAFE_RUN_LIMIT})")
     preflight = preflight_campaign(campaign_id)
 
     existing_adsets = preflight["adset_ids"]
@@ -1042,10 +984,8 @@ def run_for_campaign(campaign_id):
             return  # éxito, salir del loop de reintentos
 
     futures = []
-    if not slots_to_process:
-        print("  No hay slots pendientes para procesar.")
     with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as ex:
-        for i in slots_to_process:
+        for i in range(1, COPIES_TO_CREATE + 1):
             futures.append(ex.submit(process_copy, i))
         for f in concurrent.futures.as_completed(futures):
             try:
