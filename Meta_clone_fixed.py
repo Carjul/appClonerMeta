@@ -33,8 +33,7 @@ class RateLimitManager:
     """Gestor de rate limit para Meta API (token bucket)"""
     def __init__(self, calls_per_minute=200):
         self.calls_per_minute = calls_per_minute
-        # Arrancar sin burst inicial evita que varios workers golpeen Meta de una vez.
-        self.tokens = 0
+        self.tokens = calls_per_minute
         self.last_refill = time.time()
         self.lock = threading.Lock()
         self.min_interval = 60.0 / calls_per_minute
@@ -54,8 +53,8 @@ class RateLimitManager:
             time.sleep(self.min_interval)
 
 
-# Inicializar rate limiter preventivo. 90/min = seguro para ejecuciones con varios workers.
-RATE_LIMITER = RateLimitManager(calls_per_minute=90)
+# Inicializar rate limiter (conservador: 150/min)
+RATE_LIMITER = RateLimitManager(calls_per_minute=150)
 
 
 def _log_http_response(tag: str, r: requests.Response, truncate: int = 500):
@@ -176,11 +175,11 @@ ADS_PER_ADSET = int(_args.ads_per_adset)
 CAMPAIGN_ADSET_LIMIT = int(_args.campaign_adset_limit) if int(_args.campaign_adset_limit) > 0 else COPIES_TO_CREATE + 1
 MULTI_ADVERTISER_ADS = False
 
-SLEEP_BETWEEN = 1.0
-TRANSIENT_SLEEP = 5.0
-TRANSIENT_RETRIES = 5
+SLEEP_BETWEEN = 0.6
+TRANSIENT_SLEEP = 3.0
+TRANSIENT_RETRIES = 4
 SAVE_INTERVAL = 10
-MAX_WORKERS = 4
+MAX_WORKERS = 5
 SLOT_RETRIES = 5  # reintentos por slot ante errores de red o transitorios
 
 LOG_DIR = "logs"
