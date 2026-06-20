@@ -28,4 +28,8 @@ def serve_feed(slug: str, db: Session = Depends(get_db)):
             p.price, p.link, p.image_link, p.brand, p.video_url or "",
         ])
 
-    return Response(content=buf.getvalue(), media_type="text/csv; charset=utf-8", status_code=200 if cat else 404)
+    headers = {
+        "Content-Disposition": f'inline; filename="{slug}.csv"',
+        "Cache-Control": "no-store",
+    }
+    return Response(content=buf.getvalue(), media_type="text/csv; charset=utf-8", headers=headers, status_code=200 if cat else 404)
