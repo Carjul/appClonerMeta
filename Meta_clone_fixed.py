@@ -28,6 +28,35 @@ logging.basicConfig(level=logging.DEBUG, format=LOG_FORMAT, stream=sys.stdout)
 logger = logging.getLogger("meta_clone")
 
 
+# ── RATE LIMIT MANAGER (Token Bucket) ──────────────────────────────────────
+class RateLimitManager:
+    """Gestor de rate limit para Meta API (token bucket)"""
+    def __init__(self, calls_per_minute=200):
+        self.calls_per_minute = calls_per_minute
+        # Arrancar sin burst inicial evita que varios workers golpeen Meta de una vez.
+        self.tokens = 0
+        self.last_refill = time.time()
+        self.lock = threading.Lock()
+        self.min_interval = 60.0 / calls_per_minute
+
+    def acquire(self, tokens=1):
+        """Esperar hasta tener tokens disponibles"""
+        while True:
+            with self.lock:
+                now = time.time()
+                elapsed = now - self.last_refill
+                refilled = (elapsed / 60.0) * self.calls_per_minute
+                self.tokens = min(self.calls_per_minute, self.tokens + refilled)
+                self.last_refill = now
+                if self.tokens >= tokens:
+                    self.tokens -= tokens
+                    return
+            time.sleep(self.min_interval)
+
+
+# Inicializar rate limiter preventivo. 90/min = seguro para ejecuciones con varios workers.
+RATE_LIMITER = RateLimitManager(calls_per_minute=90)
+
 
 def _log_http_response(tag: str, r: requests.Response, truncate: int = 500):
     """Log completo de una respuesta HTTP de la API de Meta."""
@@ -147,11 +176,11 @@ ADS_PER_ADSET = int(_args.ads_per_adset)
 CAMPAIGN_ADSET_LIMIT = int(_args.campaign_adset_limit) if int(_args.campaign_adset_limit) > 0 else COPIES_TO_CREATE + 1
 MULTI_ADVERTISER_ADS = False
 
-SLEEP_BETWEEN = 0.6
-TRANSIENT_SLEEP = 3.0
-TRANSIENT_RETRIES = 4
+SLEEP_BETWEEN = 1.0
+TRANSIENT_SLEEP = 5.0
+TRANSIENT_RETRIES = 5
 SAVE_INTERVAL = 10
-MAX_WORKERS = 5
+MAX_WORKERS = 4
 SLOT_RETRIES = 5  # reintentos por slot ante errores de red o transitorios
 
 LOG_DIR = "logs"
@@ -167,7 +196,7 @@ ADSET_FIELDS = (
     "start_time,end_time,pacing_type,promoted_object,destination_type,attribution_spec"
 )
 CR_FIELDS = "object_story_spec,asset_feed_spec,degrees_of_freedom_spec,url_tags"
-SEED_FIELDS = "name,account_id,adsets.limit(100){id,name},ads.limit(100){id,name,adset_id,creative{id}}"
+SEED_FIELDS = "name,adsets.limit(100){id,name},ads.limit(100){id,name,adset_id,creative{id}}"
 
 
 def _is_rate_limit(err):
@@ -299,6 +328,8 @@ def api_batch(sub_requests):
     logger.info("BATCH request (%d sub-requests): %s", len(sub_requests), urls_summary)
 
     while True:
+        # Respetar rate limit ANTES de llamar
+        RATE_LIMITER.acquire(tokens=1)
         try:
             r = requests.post(
                 f"{BASE_URL}/",
@@ -354,6 +385,8 @@ def api_post(endpoint, payload):
     logger.debug("POST %s | payload=%s", endpoint, json.dumps(payload, ensure_ascii=False, default=str)[:600])
 
     while True:
+        # Respetar rate limit ANTES de llamar
+        RATE_LIMITER.acquire(tokens=1)
         full_payload = {**payload, "access_token": ACCESS_TOKEN}
         try:
             r = requests.post(url, json=full_payload, timeout=30)
@@ -597,13 +630,7 @@ def resolve_seed_ids_from_campaign(campaign_id):
             len(seed_ads),
         )
 
-    account_raw = body.get("account_id") or body.get("accountId")
-    account_id = str(account_raw) if account_raw is not None else ACCOUNT_ID
-    if account_id and not account_id.startswith("act_"):
-        account_id = f"act_{account_id}"
-
     return {
-        "account_id": account_id,
         "adset_id": adset_id,
         "seed_ads": seed_ads,
     }
@@ -655,7 +682,6 @@ def fetch_initial_config(campaign_id):
     print(f"  Programación: status={orig_status}, start={orig_start_time}, end={orig_end_time}")
 
     return {
-        "account_id": seed["account_id"],
         "adset_base": adset_base,
         "adset_name": adset_data["name"],
         "cr_spec": cr_spec,
@@ -703,15 +729,13 @@ def run_for_campaign(campaign_id):
     log_csv = os.path.join(LOG_DIR, f"meta_single_clone_log_{campaign_id}.csv")
 
     print(f"  Campana     : {campaign_id}")
-    cfg = fetch_initial_config(campaign_id)
-    account_id = cfg["account_id"]
-
-    print(f"  Cuenta      : {account_id}")
     print(f"  Objetivo    : crear {COPIES_TO_CREATE} copias adicionales")
     print(f"  Ads por set : {ADS_PER_ADSET}")
     print(f"  Limite set  : {CAMPAIGN_ADSET_LIMIT} adsets por campana")
     print(f"  Workers     : {MAX_WORKERS}")
     print(f"  Multi-ad    : {'DESACTIVADO' if not MULTI_ADVERTISER_ADS else 'activado'}")
+
+    cfg = fetch_initial_config(campaign_id)
     state = load_state(state_file)
     preflight = preflight_campaign(campaign_id)
 
@@ -736,7 +760,35 @@ def run_for_campaign(campaign_id):
     total_guard = 0
     unsaved_changes = 0
     lock = threading.Lock()
-   
+    expected_ads = len(cfg["original_ads"])
+
+    def check_adset_full(adset_id, key, ts, reason):
+        nonlocal unsaved_changes, total_guard
+        existing_meta_ads = find_existing_ads_in_adset(adset_id)
+        with lock:
+            slot_state = _ensure_slot_state(state, key)
+            if _sync_slot_ads_with_meta(slot_state, existing_meta_ads):
+                unsaved_changes += 1
+                if unsaved_changes >= SAVE_INTERVAL:
+                    save_state(state, state_file)
+                    unsaved_changes = 0
+            ad_counts[adset_id] = max(ad_counts.get(adset_id, 0), len(existing_meta_ads))
+            if ad_counts.get(adset_id, 0) >= expected_ads:
+                total_guard += 1
+                writer.writerow({
+                    "timestamp": ts,
+                    "i": int(key.split("=")[1]),
+                    "campaign_id": campaign_id,
+                    "adset_id": adset_id,
+                    "source_ad_id": "",
+                    "creative_id": "",
+                    "ad_id": "",
+                    "status": "GUARD_ADSET_LIMIT",
+                    "note": f"{reason} ads={ad_counts.get(adset_id, 0)}/{expected_ads}",
+                })
+                return True
+        return False
+
     def process_copy(i):
         nonlocal total_ok, total_fail, total_skip, total_guard, unsaved_changes
 
@@ -781,13 +833,16 @@ def run_for_campaign(campaign_id):
                     adset_payload["end_time"] = cfg["orig_end_time"]
                 
                 adset_id, err = api_post(
-                    f"{account_id}/adsets",
+                    f"{ACCOUNT_ID}/adsets",
                     adset_payload,
                 )
                 if err:
                     msg = err.get("message", "")
                     print(f"  i={i:02d} ERR_ADSET [{attempt}/{SLOT_RETRIES}] {msg[:80]}")
                     if attempt < SLOT_RETRIES:
+                        if check_adset_full(adset_id, key, ts, "retry-after-ad-error"):
+                            print(f"  i={i:02d} GUARD adset lleno antes de reintento {ad_counts.get(adset_id, 0)}/{expected_ads}")
+                            return
                         time.sleep(TRANSIENT_SLEEP * attempt)
                         continue
                     with lock:
@@ -808,65 +863,24 @@ def run_for_campaign(campaign_id):
                         unsaved_changes = 0
                 time.sleep(SLEEP_BETWEEN)
 
-            # Guard B — adset ya completo en Meta aunque el state no se haya guardado bien.
-            # Importante: no hacer llamadas HTTP mientras sostenemos el lock.
-            expected_ads = len(cfg["original_ads"])
-            with lock:
-                current_count = ad_counts.get(adset_id, 0)
-
-            existing_meta_ads = find_existing_ads_in_adset(adset_id) if current_count else []
-
+            # Guard B — adset ya completo en Meta aunque el state no se haya guardado bien
             with lock:
                 slot_state = _ensure_slot_state(state, key)
-                if _sync_slot_ads_with_meta(slot_state, existing_meta_ads):
-                    unsaved_changes += 1
-                ad_counts[adset_id] = max(ad_counts.get(adset_id, 0), len(existing_meta_ads))
-                if unsaved_changes >= SAVE_INTERVAL:
-                    save_state(state, state_file)
-                    unsaved_changes = 0
-                if _slot_completed(slot_state, expected_ads):
-                    total_skip += 1
-                    print(f"  i={i:02d} SKIP completo (meta)")
-                    return
 
-            with lock:
-                if ad_counts.get(adset_id, 0) >= expected_ads:
-                    total_guard += 1
-                    writer.writerow({
-                        "timestamp": ts,
-                        "i": i,
-                        "campaign_id": campaign_id,
-                        "adset_id": adset_id,
-                        "source_ad_id": "",
-                        "creative_id": "",
-                        "ad_id": "",
-                        "status": "GUARD_ADSET_LIMIT",
-                        "note": f"ads={ad_counts.get(adset_id, 0)}/{expected_ads}",
-                    })
-                    print(f"  i={i:02d} GUARD adset ya tiene {ad_counts.get(adset_id, 0)}/{expected_ads} ads")
-                    return
+            if check_adset_full(adset_id, key, ts, "preflight"):
+                total_skip += 1
+                print(f"  i={i:02d} SKIP completo (meta)")
+                return
 
             slot_failed = False
             failed_seed_ad = None
             fail_msg = ""
             for seed_ad in cfg["original_ads"]:
+                if check_adset_full(adset_id, key, ts, "before-create"):
+                    print(f"  i={i:02d} GUARD adset lleno {ad_counts.get(adset_id, 0)}/{expected_ads}")
+                    return
+
                 with lock:
-                    if ad_counts.get(adset_id, 0) >= expected_ads:
-                        total_guard += 1
-                        writer.writerow({
-                            "timestamp": ts,
-                            "i": i,
-                            "campaign_id": campaign_id,
-                            "adset_id": adset_id,
-                            "source_ad_id": seed_ad.get("ad_id", ""),
-                            "creative_id": seed_ad.get("creative_id", ""),
-                            "ad_id": "",
-                            "status": "GUARD_ADSET_LIMIT",
-                            "note": f"ads={ad_counts.get(adset_id, 0)}/{expected_ads}",
-                        })
-                        print(f"  i={i:02d} GUARD adset lleno {ad_counts.get(adset_id, 0)}/{expected_ads}")
-                        return
-                
                     slot_state = _ensure_slot_state(state, key)
                     slot_ads = slot_state["ads"]
                     ad_entry = next((item for item in slot_ads if item.get("source_ad_id") == seed_ad["ad_id"]), None)
@@ -888,7 +902,7 @@ def run_for_campaign(campaign_id):
                         continue
 
                 ad_id, err = api_post(
-                    f"{account_id}/ads",
+                    f"{ACCOUNT_ID}/ads",
                     {
                         "name": seed_ad["ad_name"],
                         "adset_id": adset_id,
@@ -915,7 +929,7 @@ def run_for_campaign(campaign_id):
                             ad_id = recovered_id
                             print(f"  i={i:02d} ad RECOVER {ad_id}")
                         else:
-                            if ad_counts.get(adset_id, 0) >= expected_ads:
+                            if check_adset_full(adset_id, key, ts, "recover"):
                                 print(f"  i={i:02d} GUARD adset lleno tras recover {ad_counts.get(adset_id, 0)}/{expected_ads}")
                                 return
                             print(f"  i={i:02d} ERR_AD NET [{attempt}/{SLOT_RETRIES}] {msg[:80]}")
